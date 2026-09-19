@@ -2,25 +2,15 @@
     <string name="app_name">Noticon</string>
 
     <!--
-        模块描述。两个名字都定义，因为框架之间写法不一致：
+        模块描述，被 AndroidManifest 的 android:description 引用。
 
-        - `xposed_description`：LSPosed / 老版模块的写法，带下划线。
-        - `xposeddescription`：**Vector 实际查的是这个不带下划线的名字**。
-          这个名字是从 Vector 管理器的 dex 字符串表里扒出来的（它同时还查
-          `xposedminversion`、`xposedscope`）。只定义带下划线的那一个时，
-          Vector 里会一直显示成「没有描述」。
+        这是 LibXposed（API 102）模块在管理器里显示描述的**唯一**字段：
+        管理器读的是 ApplicationInfo.descriptionRes。
+        老式写法（xposeddescription meta-data / 同名字符串资源）已经全部删掉，
+        那是给 API <= 93 的旧框架用的，留着反而让模块变成"兼容模式"。
 
-        两个都直接写完整字符串，**不要互相引用**：
-        aapt2 对 `<string>X</string>` 元素的值是 `@string/Y` 的情况有边界 bug，
-        会把字面字符串 "@string/Y" 存到 X 里（dump resources 能看到），
-        Vector 反射 getString(X) 拿到的是 "@string/Y" 而不是真实描述。
-        两个独立字符串就没这个问题，改文字需要改两处。
-
-        manifest meta-data 里 `xposeddescription` 写的是裸字符串字面量
-        （不是资源引用），所以 `Bundle.getString()` 能正确读到。
+        长度约定：中文 <= 26 字，太长在模块列表里会占好几行。
+        当前是 26 字。
     -->
     <string name="xposed_description">把未适配的通知小图标换成应用图标，保留原色；已适配的不动</string>
-    <string name="xposeddescription">把未适配的通知小图标换成应用图标，保留原色；已适配的不动</string>
-
-    <string name="xposedminversion">102</string>
 </resources>

@@ -2,53 +2,38 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+        纯 LibXposed（现代 API 102）模块，不要再放老式 xposed meta-data。
+
+        官方说明（LSPosed wiki · Develop Xposed Modules Using Modern Xposed API）：
+          "Modern API does not use metadata anymore as well. Module name uses
+           android:label; module description uses android:description; scope list
+           uses META-INF/xposed/scope.list; module configuration uses
+           META-INF/xposed/module.prop"
+
+        所以：
+          - 模块名     -> android:label         （@string/app_name）
+          - 模块描述   -> android:description   （@string/xposed_description）
+          - 作用域     -> META-INF/xposed/scope.list
+          - 模块配置   -> META-INF/xposed/module.prop（含 staticScope=true）
+          - Java 入口  -> META-INF/xposed/java_init.list
+
+        曾经这里放过 xposedmodule / xposeddescription / xposedminversion /
+        xposedscope 四个 meta-data（老式写法），那是给 API <= 93 的旧框架用的。
+        混着放会让管理器把模块当成"兼容模式/不纯粹"的模块处理，作用域列表
+        也会退化成列出全部已装应用。已全部删除。
+
+        验证方式（设备上对比 Eta 得出的结论）：Eta 是 API 102 且能正常显示描述
+        和固定作用域，它的 application 标签里一个 xposed meta-data 都没有。
+
+        注意：res/values/arrays.xml 的 xposed_scope 数组和 res/raw/keep.xml
+        都是为那几个 meta-data 服务的，已一并删除。
+    -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:description="@string/xposed_description"
-        tools:targetApi="34">
-
-        <!--
-            android:description 是真正在 Vector 里显示出描述的字段。
-
-            从设备上两个「能显示描述」的模块反推出来的（aapt2 dump 对比）：
-              - Global Icon Pack（老 Xposed，minversion=93）
-                -> 有 xposeddescription meta-data，**没有** android:description
-              - Eta（LibXposed，API 102，跟我们同类）
-                -> 有 android:description=@string/xposed_description
-                   **完全没有** xposeddescription meta-data（grep -c 得 0）
-                   其 description 资源的中文值正是 Vector 界面上显示的文字
-
-            结论：**Vector 对 LibXposed（API >= 100）模块读 android:description
-            （ApplicationInfo.descriptionRes），对老 Xposed 才读 xposeddescription
-            meta-data。** 我们是 API 102，之前只有 meta-data，所以一直显示空。
-
-            这个属性是 Android 标准属性（API 1 起），值走资源引用没问题 ——
-            它是 PackageManager 解析的，不是 Bundle.getString()。
-        -->
-        <meta-data
-            android:name="xposedmodule"
-            android:value="true" />
-        <!--
-            模块描述。
-
-            这里必须是**字符串字面量**，不能写 @string/xxx 引用：
-            框架（Vector / LSPosed）读的是 ApplicationInfo.metaData 这个 Bundle，
-            meta-data 一旦写成资源引用，编译后 APK 里存的是 int 资源 id
-            （aapt2 dump xmltree 会显示成 @0x7f0b0009），
-            Bundle.getString() 拿到非 String 会返回 null —— 表现就是「没有描述」。
-            上游 NoticeFix_mod 同样是直接写死字符串，不是引用。
-        -->
-        <meta-data
-            android:name="xposeddescription"
-            android:value="把未适配的通知小图标换成应用图标，保留原色；已适配的不动" />
-        <meta-data
-            android:name="xposedminversion"
-            android:value="102" />
-        <meta-data
-            android:name="xposedscope"
-            android:resource="@array/xposed_scope" />
-    </application>
+        tools:targetApi="34" />
 </manifest>
