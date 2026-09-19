@@ -1,0 +1,6 @@
+First release.
+
+- Replaces unthemed notification small icons with the app's launcher icon, keeping original colors.
+- Leaves already-monochrome icons untouched (same grayscale check as the system).
+- No launcher entry, no UI. Just install + enable + reboot.
+- Hooks into SystemUI only via LibXposed API 100+.

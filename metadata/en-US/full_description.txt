@@ -1,0 +1,38 @@
+# Noticon
+
+A pure-background Xposed module that **replaces unthemed notification small icons with the app's own launcher icon**, keeping the original colors. Icons that are already monochrome are left untouched.
+
+Android 12 and later force-tint notification small icons: apps that didn't ship a monochrome variant get rendered as a single gray blob that you can't tell apart at a glance. Noticon fixes exactly that.
+
+## Highlights
+
+- **No launcher entry, no UI**: install, enable, reboot. That's it.
+- **Only touches unthemed icons**: uses the same grayscale check as the system to detect apps that already adapted. Properly adapted icons are never touched.
+- **Keeps the original colors**: replacement icons are rendered with the app's real colors, not re-tinted by the status bar.
+- **Scoped to SystemUI only**: hooks are installed only into `com.android.systemui`. No other process is touched.
+
+## Requirements
+
+- LibXposed API 100+ (LSPosed, Vector, etc.)
+- Android 8.0 (API 26) or later
+- Status bar / lock screen permission for the chosen framework
+
+## How to confirm it's working
+
+```bash
+adb logcat -s Noticon -d | grep patched
+```
+
+If you see `patched <pkg> 2->1`, the module swapped a resource-type icon for a bitmap — that's the fix landing. If the line is empty, every icon on your device is already monochrome and the module correctly did nothing.
+
+## Build
+
+```bash
+./gradlew assembleRelease   # produces an unsigned APK
+```
+
+Sign it with `apksigner` (see `README.md` for the exact command) and install.
+
+## License
+
+MIT.
