@@ -1,43 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    主题图标（Android 13+）用的单色版，形状与彩色版完全一致（含角标挖空）。
-
-    系统只取 alpha 通道着色，颜色写什么都会被丢掉，所以四条色带用不同
-    不透明度（100 / 75 / 50 / 30%）拉开层次 —— 否则整只铃铛会变成一个
-    实心剪影，看不出里面是四色分带的。
-
-    角标的挖空是靠 clip-path 里两条子路径缠绕方向相反实现的（见彩色版注释），
-    所以这里同样能挖出缺口，不需要画白圆遮盖。
+    主题图标（单色）版：与彩色版同形，但去掉红点/白色铃舌/角标，
+    四色带按 alpha 100/75/50/30 拉开层次，柔和不抢戏。
+    整体仍然零锐角：钟身轮廓与彩色版完全一致。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
-    android:viewportHeight="108"
-    android:fillType="evenOdd">
+    android:viewportHeight="108">
 
-    <group>
-        <clip-path
-            android:pathData="M54,26 C45,26 37,33 35,43.5 L31,58 C30,65 33.5,71.5 40,71.5 L68,71.5 C74.5,71.5 78,65 77,58 L73,43.5 C71,33 63,26 54,26 Z M62.5,37 A8.5,8.5 0 1 1 79.5,37 A8.5,8.5 0 1 1 62.5,37 Z" />
+    <clip-path
+        android:pathData="M39,43 C39,35.72 45.72,29 54,29 C62.28,29 69,35.72 69,43 C69,58 80,77 74,77 L34,77 C28,77 39,58 39,43 Z" />
 
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M-62.42,92.35 L145.42,-27.65 L150.92,-18.12 L-56.92,101.88 Z" />
-
-        <path
-            android:fillColor="#BFFFFFFF"
-            android:pathData="M-55.92,103.61 L151.92,-16.39 L156.42,-8.6 L-51.42,111.4 Z" />
-
-        <path
-            android:fillColor="#80FFFFFF"
-            android:pathData="M-50.42,113.13 L157.42,-6.87 L161.92,0.93 L-45.92,120.93 Z" />
-
-        <path
-            android:fillColor="#4DFFFFFF"
-            android:pathData="M-44.92,122.66 L162.92,2.66 L170.92,16.52 L-36.92,136.52 Z" />
-    </group>
-
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M65,37 A6,6 0 1 1 77,37 A6,6 0 1 1 65,37 Z" />
+    <!-- 用 alpha 而不是颜色来拉开层次（主题图标只取一种颜色） -->
+    <path android:fillColor="#BFFFFFFF"
+          android:pathData="M0,0 L108,0 L108,10.16 L0,72.5 Z" />
+    <path android:fillColor="#80FFFFFF"
+          android:pathData="M0,72.5 L108,10.16 L108,21.7 L0,84.06 Z" />
+    <path android:fillColor="#80FFFFFF"
+          android:pathData="M0,84.06 L108,21.7 L108,33.22 L0,95.61 Z" />
+    <path android:fillColor="#4DFFFFFF"
+          android:pathData="M0,95.61 L108,33.22 L108,108 L0,108 Z" />
 </vector>

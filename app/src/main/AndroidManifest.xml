@@ -12,9 +12,19 @@
         <meta-data
             android:name="xposedmodule"
             android:value="true" />
+        <!--
+            模块描述。
+
+            这里必须是**字符串字面量**，不能写 @string/xxx 引用：
+            框架（Vector / LSPosed）读的是 ApplicationInfo.metaData 这个 Bundle，
+            meta-data 一旦写成资源引用，编译后 APK 里存的是 int 资源 id
+            （aapt2 dump xmltree 会显示成 @0x7f0b0009），
+            Bundle.getString() 拿到非 String 会返回 null —— 表现就是「没有描述」。
+            上游 NoticeFix_mod 同样是直接写死字符串，不是引用。
+        -->
         <meta-data
             android:name="xposeddescription"
-            android:value="@string/xposed_description" />
+            android:value="把未适配主题的通知小图标换成应用自己的图标，并保留原本的彩色；已经适配（单色/灰度）的图标原样不动。纯后台运行，无桌面入口、无需配置，只作用于系统界面（SystemUI）。" />
         <meta-data
             android:name="xposedminversion"
             android:value="102" />
