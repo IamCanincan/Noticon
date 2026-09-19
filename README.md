@@ -20,8 +20,20 @@ Android 12 起系统会强行把通知小图标统一着色，没做单色适配
 
 ### 日志排查
 
+嫌一步步敲命令麻烦，可以在 Git Bash 里直接跑（会自动装 APK、提示手动启用模块、重启 SystemUI、把日志存成 `noticon.log`）：
+
 ```bash
-adb logcat -s Noticon
+./scripts/check-device.sh
+```
+
+手动做的话：
+
+```bash
+adb install -r Noticon-v1.0-release.apk
+# 在框架里启用 Noticon，作用域勾「系统界面」
+adb logcat -c
+adb shell kill $(adb shell pidof com.android.systemui)   # 或 adb reboot
+adb logcat -s Noticon -d
 ```
 
 正常挂载后日志大致是这样：
