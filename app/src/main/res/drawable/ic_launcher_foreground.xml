@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 左半灰（未适配、被系统统一着色的图标）/ 右半三色（替换后的彩色 App 图标） -->
+    <group>
+        <clip-path
+            android:pathData="M32,44 a12,12 0 0 1 12,-12 h20 a12,12 0 0 1 12,12 v20 a12,12 0 0 1 -12,12 h-20 a12,12 0 0 1 -12,-12 z" />
+        <path
+            android:fillColor="#9AA5B1"
+            android:pathData="M32,32 h54 v44 h-54 z" />
+        <path
+            android:fillColor="#3B82F6"
+            android:pathData="M54,32 h22 v14.7 h-22 z" />
+        <path
+            android:fillColor="#22C55E"
+            android:pathData="M54,46.7 h22 v14.6 h-22 z" />
+        <path
+            android:fillColor="#F97316"
+            android:pathData="M54,61.3 h22 v14.7 h-22 z" />
+    </group>
+</vector>

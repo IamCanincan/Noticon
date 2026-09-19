@@ -1,0 +1,53 @@
+# Built application files
+*.apk
+*.apk.idsig
+*.idsig
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Gradle files
+.gradle/
+build/
+
+# Local configuration file (sdk path, etc.)
+local.properties
+
+# Log/OS Files
+*.log
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+# Keep the gradle wrapper jar tracked; ignore only the rest of .idea
+# .idea/workspace.xml is ignored by the lines above
+
+# Keystore files
+*.jks
+*.keystore
+
+# External native build folders
+.externalNativeBuild/
+.cxx/
+
+# Android Profiling
+*.hprof
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# WorkBuddy AI project memory (internal, not source)
+.workbuddy-ai/

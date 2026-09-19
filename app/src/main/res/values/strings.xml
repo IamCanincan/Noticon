@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Noticon</string>
+    <string name="xposed_description">将未适配主题的通知小图标替换为 App 图标，已适配（单色）的图标保持不变。基于 LibXposed API 102。</string>
+</resources>
