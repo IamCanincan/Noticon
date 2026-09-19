@@ -2,9 +2,9 @@
 <!--
     主题图标（Android 13+）用的单色版，形状与彩色版完全一致。
 
-    系统只取 alpha 通道着色，颜色写什么都会被丢掉，所以四段用不同
-    不透明度（100 / 75 / 50 / 35%）拉开层次 —— 否则四段连成一整圈，
-    看不出里面是分段的，也认不出这是同一个图标。
+    系统只取 alpha 通道着色，颜色写什么都会被丢掉，所以四条色带用不同
+    不透明度（100 / 75 / 50 / 30%）拉开层次 —— 否则整只铃铛会变成一个
+    实心剪影，看不出里面是四色分带的。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -13,35 +13,23 @@
     android:viewportHeight="108">
 
     <group>
+        <clip-path
+            android:pathData="M54,28 C46.5,28 39,35.5 37,45 L32,61 C31,66 34.5,70 39.5,70 L68.5,70 C73.5,70 77,66 76,61 L71,45 C69,35.5 61.5,28 54,28 Z M54,70 A6,6 0 0 1 54,82 A6,6 0 0 1 54,70 Z" />
+
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M56.16,23.07 A31,31 0 0 1 84.93,51.84 L65.97,53.16 A12,12 0 0 0 54.84,42.03 Z" />
-    </group>
+            android:pathData="M-61.15,94.52 L146.65,-25.49 L152.65,-15.09 L-55.15,104.91 Z" />
 
-    <group
-        android:pivotX="54"
-        android:pivotY="54"
-        android:rotation="90">
         <path
             android:fillColor="#BFFFFFFF"
-            android:pathData="M56.16,23.07 A31,31 0 0 1 84.93,51.84 L65.97,53.16 A12,12 0 0 0 54.84,42.03 Z" />
-    </group>
+            android:pathData="M-54.15,106.64 L153.65,-13.36 L157.65,-6.43 L-50.15,113.57 Z" />
 
-    <group
-        android:pivotX="54"
-        android:pivotY="54"
-        android:rotation="180">
         <path
             android:fillColor="#80FFFFFF"
-            android:pathData="M56.16,23.07 A31,31 0 0 1 84.93,51.84 L65.97,53.16 A12,12 0 0 0 54.84,42.03 Z" />
-    </group>
+            android:pathData="M-49.15,115.30 L158.65,-4.70 L162.65,4.23 L-45.15,122.23 Z" />
 
-    <group
-        android:pivotX="54"
-        android:pivotY="54"
-        android:rotation="270">
         <path
-            android:fillColor="#59FFFFFF"
-            android:pathData="M56.16,23.07 A31,31 0 0 1 84.93,51.84 L65.97,53.16 A12,12 0 0 0 54.84,42.03 Z" />
+            android:fillColor="#4DFFFFFF"
+            android:pathData="M-44.15,123.96 L163.65,3.96 L171.4,17.38 L-36.4,137.38 Z" />
     </group>
 </vector>
