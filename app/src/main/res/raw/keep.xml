@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    R8 资源裁剪白名单。
+
+    这些资源只在代码里通过 getIdentifier/getString 反射查找，没有任何静态引用，
+    R8 默认会把它们当成无用资源删掉。删掉之后框架就读不到，导致 Vector 里
+    显示成「没有描述」。手动 keep 一下。
+
+    之前还踩过类似的坑（图标改成保留名字就是为了防 R8 改名入口类，
+    跟这里是一个道理）。
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/xposed_description,@string/xposeddescription,@string/xposedminversion" />

@@ -1,4 +1,19 @@
 <resources>
     <string name="app_name">Noticon</string>
-    <string name="xposed_description">Android 12 起系统会强行把通知小图标统一着色，没做单色适配的应用会显示成一坨认不出是谁的灰白色块。Noticon 把这些图标换成应用自己在桌面上那个图标，并保住原本的彩色；已经适配（单色/灰度）的图标原样不动。纯后台运行，没有桌面入口、不需要任何配置，只作用于系统界面（SystemUI）。基于 LibXposed API 102。</string>
+
+    <!--
+        模块描述。两个名字都定义，因为框架之间写法不一致：
+
+        - `xposed_description`：LSPosed / 老版模块的写法，带下划线。
+        - `xposeddescription`：**Vector 实际查的是这个不带下划线的名字**。
+          这个名字是从 Vector 管理器的 dex 字符串表里扒出来的（它同时还查
+          `xposedminversion`、`xposedscope`）。只定义带下划线的那一个时，
+          Vector 里会一直显示成「没有描述」。
+
+        后者直接引用前者，改文字只需要改一处。
+    -->
+    <string name="xposed_description">把未适配主题的通知小图标换成应用自己的图标并保留原色，已适配（单色/灰度）的图标原样不动。纯后台运行，无桌面入口、无需配置，仅作用于 SystemUI。基于 LibXposed API 102。</string>
+    <string name="xposeddescription">@string/xposed_description</string>
+
+    <string name="xposedminversion">102</string>
 </resources>

@@ -14,22 +14,22 @@
 
     <group>
         <clip-path
-            android:pathData="M54,28 C46.5,28 39,35.5 37,45 L32,61 C31,66 34.5,70 39.5,70 L68.5,70 C73.5,70 77,66 76,61 L71,45 C69,35.5 61.5,28 54,28 Z M54,70 A6,6 0 0 1 54,82 A6,6 0 0 1 54,70 Z" />
+            android:pathData="M54,26 C45,26 37,33 35,43.5 L31,58 C30,65 33.5,71.5 40,71.5 L68,71.5 C74.5,71.5 78,65 77,58 L73,43.5 C71,33 63,26 54,26 Z M54,70.5 A5.5,5.5 0 0 1 54,81.5 A5.5,5.5 0 0 1 54,70.5 Z" />
 
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M-61.15,94.52 L146.65,-25.49 L152.65,-15.09 L-55.15,104.91 Z" />
+            android:pathData="M-62.42,92.35 L145.42,-27.65 L150.92,-18.12 L-56.92,101.88 Z" />
 
         <path
             android:fillColor="#BFFFFFFF"
-            android:pathData="M-54.15,106.64 L153.65,-13.36 L157.65,-6.43 L-50.15,113.57 Z" />
+            android:pathData="M-55.92,103.61 L151.92,-16.39 L156.42,-8.6 L-51.42,111.4 Z" />
 
         <path
             android:fillColor="#80FFFFFF"
-            android:pathData="M-49.15,115.30 L158.65,-4.70 L162.65,4.23 L-45.15,122.23 Z" />
+            android:pathData="M-50.42,113.13 L157.42,-6.87 L161.92,0.93 L-45.92,120.93 Z" />
 
         <path
             android:fillColor="#4DFFFFFF"
-            android:pathData="M-44.15,123.96 L163.65,3.96 L171.4,17.38 L-36.4,137.38 Z" />
+            android:pathData="M-44.92,122.66 L162.92,2.66 L170.92,16.52 L-36.92,136.52 Z" />
     </group>
 </vector>
