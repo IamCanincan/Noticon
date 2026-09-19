@@ -8,6 +8,7 @@ import android.view.View
 import android.os.Build
 import android.widget.RemoteViews
 import com.iamcanincan.noticon.util.MemberLookup
+import java.lang.reflect.Method
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 
@@ -73,18 +74,31 @@ object SystemUiHooks {
             ModuleRuntime.logE("NotificationRowBinderImpl not found", NoSuchElementException(ROW_BINDER_MODERN))
             return
         }
-        val entryClass = MemberLookup.findClass(NOTIFICATION_ENTRY, classLoader) ?: return
+        // entry 类是「认出哪个参数是通知条目」的钥匙；认不出来也不能就此放弃，
+        // 下面退化为「带参数的 inflateViews 都挂上，运行时再逐个参数试着取 sbn」
+        val entryClass = MemberLookup.findClass(NOTIFICATION_ENTRY, classLoader)
+        if (entryClass == null) ModuleRuntime.logW("NotificationEntry unresolved, falling back to parameter probing")
 
-        for (method in binderClass.declaredMethods) {
-            if (method.name != "inflateViews") continue
-            if (!method.parameterTypes.contains(entryClass)) continue
+        val candidates = binderClass.declaredMethods.filter { it.name == "inflateViews" }
+        val overloads = candidates.filter { method ->
+            if (entryClass != null) method.parameterTypes.contains(entryClass)
+            else method.parameterTypes.isNotEmpty()
+        }
+        if (overloads.isEmpty()) {
+            ModuleRuntime.logE("inflateViews not found", NoSuchMethodException("inflateViews"))
+            return
+        }
+
+        for (method in overloads) {
             method.isAccessible = true
 
             module.hook(method).setId("inflateViews").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
                 captureSystemContext(chain.thisObject)
 
                 for (arg in chain.args) {
-                    if (arg == null || !entryClass.isInstance(arg)) continue
+                    if (arg == null) continue
+                    // entryClass 为 null 时放行所有参数，靠能否取出 sbn 来判断
+                    if (entryClass != null && !entryClass.isInstance(arg)) continue
                     runCatching {
                         val sbn = (MemberLookup.readFieldByType(arg, StatusBarNotification::class.java)
                             ?: MemberLookup.readField(arg, "mSbn")) as? StatusBarNotification ?: return@runCatching
@@ -101,10 +115,8 @@ object SystemUiHooks {
                 }
                 chain.proceed()
             }
-            ModuleRuntime.logI("inflateViews hooked")
-            return
         }
-        ModuleRuntime.logE("inflateViews not found", NoSuchMethodException("inflateViews"))
+        ModuleRuntime.logI("inflateViews hooked (${overloads.size} overload(s))")
     }
 
     /** 顺一个 SystemUI 的 Context 出来，后面取包名资源要用 */
@@ -152,9 +164,17 @@ object SystemUiHooks {
             ModuleRuntime.logI("setIcon hooked")
         }
 
-        if (statusBarIconView == null) return
+        // 注意：这里不能因为 StatusBarIconView 找不到就整个返回 —— processSmallIconColor
+        // 是独立的一条保色路径，少挂它就只能退回到「换了图但带灰底」的效果
+        if (statusBarIconView != null) {
+            hookUpdateIconColor(module, classLoader, statusBarIconView)
+        }
 
-        MemberLookup.methodWithParams(statusBarIconView, "updateIconColor")?.let { method ->
+        installSmallIconColor(module, classLoader)
+    }
+
+    private fun hookUpdateIconColor(module: XposedModule, classLoader: ClassLoader, iconView: Class<*>) {
+        MemberLookup.methodWithParams(iconView, "updateIconColor")?.let { method ->
             val contrastUtil = MemberLookup.findClass(CONTRAST_UTIL, classLoader)
             module.hook(method).setId("updateIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
                 if (shouldKeepColor()) {
@@ -179,23 +199,25 @@ object SystemUiHooks {
             }
             ModuleRuntime.logI("updateIconColor hooked")
         }
-
-        installSmallIconColor(module, classLoader)
     }
 
     @SuppressLint("DiscouragedApi")
     private fun installSmallIconColor(module: XposedModule, classLoader: ClassLoader) {
         val builderClass = MemberLookup.findClass("android.app.Notification\$Builder", classLoader)
+            ?: return
         // 嵌套类的二进制名必须用 $ 分隔，写成 . 会让 loadClass 返回 null
         val paramsClass = MemberLookup.findClass("android.app.Notification\$StandardTemplateParams", classLoader)
-        if (builderClass == null || paramsClass == null) return
 
-        val method = runCatching {
-            MemberLookup.declaredMethod(
-                builderClass, "processSmallIconColor",
-                Icon::class.java, RemoteViews::class.java, paramsClass
-            )
-        }.getOrNull() ?: return
+        val method = if (paramsClass != null) {
+            runCatching {
+                MemberLookup.declaredMethod(
+                    builderClass, "processSmallIconColor",
+                    Icon::class.java, RemoteViews::class.java, paramsClass
+                )
+            }.getOrNull()
+        } else {
+            null
+        } ?: fallbackSmallIconColor(builderClass) ?: return
 
         module.hook(method).setId("processSmallIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
             if (shouldKeepColor()) {
@@ -220,6 +242,20 @@ object SystemUiHooks {
             chain.proceed()
         }
         ModuleRuntime.logI("processSmallIconColor hooked")
+    }
+
+    /**
+     * StandardTemplateParams 是私有嵌套类，取不到时不能就此放弃：
+     * 按「名字 + 三参数 + 首参是 Icon」这条弱特征再找一次，够用了。
+     */
+    private fun fallbackSmallIconColor(builderClass: Class<*>): Method? {
+        val method = builderClass.declaredMethods.firstOrNull {
+            it.name == "processSmallIconColor" &&
+                    it.parameterTypes.size == 3 &&
+                    it.parameterTypes[0] == Icon::class.java
+        }
+        if (method != null) ModuleRuntime.logW("processSmallIconColor resolved by signature fallback")
+        return method
     }
 
     private fun shouldKeepColor(): Boolean {
