@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">Noticon</string>
-    <string name="xposed_description">将未适配主题的通知小图标替换为 App 图标，已适配（单色）的图标保持不变。基于 LibXposed API 102。</string>
+    <string name="xposed_description">Android 12 起系统会强行把通知小图标统一着色，没做单色适配的应用会显示成一坨认不出是谁的灰白色块。Noticon 把这些图标换成应用自己在桌面上那个图标，并保住原本的彩色；已经适配（单色/灰度）的图标原样不动。纯后台运行，没有桌面入口、不需要任何配置，只作用于系统界面（SystemUI）。基于 LibXposed API 102。</string>
 </resources>

@@ -2,9 +2,9 @@
 <!--
     主题图标（Android 13+）用的单色版，形状与彩色版完全一致。
 
-    系统只取 alpha 通道着色，颜色写什么都会被丢掉，所以四片用不同
-    不透明度（100 / 75 / 50 / 35%）拉开层次 —— 否则四片连成一个整圆，
-    看不出里面还有结构。
+    系统只取 alpha 通道着色，颜色写什么都会被丢掉，所以四段用不同
+    不透明度（100 / 75 / 50 / 35%）拉开层次 —— 否则四段连成一整圈，
+    看不出里面是分段的，也认不出这是同一个图标。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -15,7 +15,7 @@
     <group>
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+            android:pathData="M56.16,23.07 A31,31 0 0 1 84.93,51.84 L65.97,53.16 A12,12 0 0 0 54.84,42.03 Z" />
     </group>
 
     <group
@@ -24,7 +24,7 @@
         android:rotation="90">
         <path
             android:fillColor="#BFFFFFFF"
-            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+            android:pathData="M56.16,23.07 A31,31 0 0 1 84.93,51.84 L65.97,53.16 A12,12 0 0 0 54.84,42.03 Z" />
     </group>
 
     <group
@@ -33,7 +33,7 @@
         android:rotation="180">
         <path
             android:fillColor="#80FFFFFF"
-            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+            android:pathData="M56.16,23.07 A31,31 0 0 1 84.93,51.84 L65.97,53.16 A12,12 0 0 0 54.84,42.03 Z" />
     </group>
 
     <group
@@ -42,6 +42,6 @@
         android:rotation="270">
         <path
             android:fillColor="#59FFFFFF"
-            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+            android:pathData="M56.16,23.07 A31,31 0 0 1 84.93,51.84 L65.97,53.16 A12,12 0 0 0 54.84,42.03 Z" />
     </group>
 </vector>
