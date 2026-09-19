@@ -17,16 +17,26 @@ data class ModuleOptions(
     var preserveTinted: Boolean = true,
 
     /**
-     * 保留替换后图标的原色。
-     * 关掉的话状态栏会按主题把图标统一染成白/灰，换了的图标又变回一团色块。
+     * 跳过系统的统一着色、保住图标原色。
+     *
+     * 默认关：现在默认策略是压成单色剪影，交出去的 alpha 形状本来就该由系统
+     * 按主题上色 —— 那样才和「应用自己适配过」完全一致（深色主题白、浅色主题深）。
+     * 只有改用 USE_LAUNCHER_ICON（往通知里塞彩色启动图标）时才需要打开，
+     * 否则系统会把塞进去的彩色图标又染回单色，白换一场。
      */
-    var keepOriginalColor: Boolean = true,
+    var keepOriginalColor: Boolean = false,
 
     /** 是否连代发通知（例如推送 SDK 代投、opPkg 与 pkg 不一致）一起处理 */
     var includeProxyNotifications: Boolean = false,
 
-    /** 替换策略，取值见下面的常量 */
-    var replacement: Int = USE_LAUNCHER_ICON,
+    /**
+     * 替换策略，取值见下面的常量。
+     *
+     * 默认走「压成系统风格的单色剪影」：这样修出来的图标和那些本来就做好了
+     * 主题适配的应用完全一致 —— 状态栏统一着色、随主题深浅变化，
+     * 而不是往通知里塞一张彩色启动图标。
+     */
+    var replacement: Int = FORCE_MONOCHROME,
 
     /** 永不处理的应用包名 */
     var excludedPackages: Set<String> = emptySet()

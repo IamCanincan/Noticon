@@ -17,6 +17,7 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import androidx.core.content.res.ResourcesCompat
 import com.iamcanincan.noticon.util.MemberLookup
+import kotlin.math.abs
 
 /**
  * 图标位图的取与造。
@@ -27,6 +28,12 @@ import com.iamcanincan.noticon.util.MemberLookup
 object IconBitmap {
 
     private const val ICON_EDGE = 64
+
+    /** alpha 低于这个值就当透明，不算图形的一部分 —— 用来滤掉图标自带的半透明投影 */
+    private const val MIN_SHAPE_ALPHA = 128
+
+    /** 与底板色的 RGB 差之和超过这个值才算图形，只在整张图标都不透明时用得上 */
+    private const val PLATE_DELTA = 90
 
     /**
      * 把 Drawable 画成指定边长的方形位图。
@@ -84,10 +91,14 @@ object IconBitmap {
     }
 
     /**
-     * 把彩色图标压成单色，模拟「应用自己做了主题适配」的样子。
+     * 把彩色图标压成系统风格的单色剪影：透明底 + 白色形状。
      *
-     * 先取全图平均亮度当阈值，再看四边是否有留白或反色，据此决定保留暗部还是亮部；
-     * 处理的是通知图标，尺寸很小，直接逐像素扫一遍即可。
+     * 系统对这种图标的处理，和对「应用自己做好了主题适配」的完全一样 ——
+     * 按主题统一着色、随深浅主题变化。所以交给系统的必须是纯 alpha 形状，
+     * 不能是带颜色的位图，否则染出来就不对了。
+     *
+     * 形状优先取自 alpha 通道：绝大多数图标是透明底 + 图形，alpha 本身就是轮廓。
+     * 整张都不透明时（自适应图标光栅化后常见）退化成「与四边底板色差异大的算图形」。
      */
     fun monochrome(input: Bitmap): Bitmap {
         val w = input.width
@@ -96,50 +107,60 @@ object IconBitmap {
         val outputPixels = IntArray(w * h)
         input.getPixels(pixels, 0, w, 0, 0, w, h)
 
-        var brightnessSum = 0
-        var opaqueCount = 0
+        var transparentCount = 0
         for (pixel in pixels) {
-            if (pixel != 0) {
-                brightnessSum += (Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)) / 3
-                opaqueCount++
-            }
+            if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) transparentCount++
         }
 
-        if (opaqueCount > 0) {
-            val average = brightnessSum / opaqueCount
-            val up = pixels[(w * 1.5).toInt()]
-            val down = pixels[(w * h - w * 1.5).toInt()]
-            val left = pixels[((h / 2) * w - w + 2)]
-            val right = pixels[((h / 2) * w - 1)]
-
-            // 四边都是亮色 → 图是「白底黑形」，需要反相；四边都是暗色 → 本来就有留白
-            val needsInvert = isBrighter(up, average) && isBrighter(down, average) &&
-                    isBrighter(left, average) && isBrighter(right, average)
-            val hasPadding = isDarker(up, average) && isDarker(down, average) &&
-                    isDarker(left, average) && isDarker(right, average)
-
-            var keepDark: Boolean? = null
+        if (transparentCount > pixels.size / 20) {
+            // 自带透明区域 → alpha 就是最准的遮罩，直接照搬
+            for (i in pixels.indices) {
+                if (Color.alpha(pixels[i]) >= MIN_SHAPE_ALPHA) outputPixels[i] = Color.WHITE
+            }
+        } else {
+            // 整张不透明：拿四边的平均色当底板色，和它差得远的才是图形
+            val plate = edgeAverage(pixels, w, h)
+            val plateR = Color.red(plate)
+            val plateG = Color.green(plate)
+            val plateB = Color.blue(plate)
             for (i in pixels.indices) {
                 val pixel = pixels[i]
-                if (pixel == 0) continue
-                val sum = Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)
-                val threshold = 3 * average
-
-                if (hasPadding || needsInvert) {
-                    if (keepDark == null) keepDark = sum > threshold
-                    if (keepDark && sum <= threshold) outputPixels[i] = Color.WHITE
-                    else if (!keepDark && sum > threshold) outputPixels[i] = Color.WHITE
-                } else {
-                    if (keepDark == null) keepDark = sum <= threshold
-                    if (keepDark && sum <= threshold) outputPixels[i] = Color.WHITE
-                    else if (!keepDark && sum > threshold) outputPixels[i] = Color.WHITE
-                }
+                if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
+                val delta = abs(Color.red(pixel) - plateR) +
+                        abs(Color.green(pixel) - plateG) +
+                        abs(Color.blue(pixel) - plateB)
+                if (delta > PLATE_DELTA) outputPixels[i] = Color.WHITE
             }
         }
 
         val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         result.setPixels(outputPixels, 0, w, 0, 0, w, h)
         return result
+    }
+
+    /** 采样四条边的平均色，当作不透明图标的底板色 */
+    private fun edgeAverage(pixels: IntArray, w: Int, h: Int): Int {
+        var r = 0L
+        var g = 0L
+        var b = 0L
+        var count = 0
+        fun take(index: Int) {
+            val pixel = pixels[index]
+            if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) return
+            r += Color.red(pixel)
+            g += Color.green(pixel)
+            b += Color.blue(pixel)
+            count++
+        }
+        for (x in 0 until w) {
+            take(x)
+            take((h - 1) * w + x)
+        }
+        for (y in 0 until h) {
+            take(y * w)
+            take(y * w + w - 1)
+        }
+        return if (count == 0) Color.BLACK else Color.rgb((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
     }
 
     /**
@@ -189,13 +210,4 @@ object IconBitmap {
         }
     }
 
-    private fun isBrighter(color: Int, average: Int): Boolean {
-        if (color == 0) return false
-        return Color.red(color) + Color.green(color) + Color.blue(color) > 3 * average
-    }
-
-    private fun isDarker(color: Int, average: Int): Boolean {
-        if (color == 0) return false
-        return Color.red(color) + Color.green(color) + Color.blue(color) <= 3 * average
-    }
 }

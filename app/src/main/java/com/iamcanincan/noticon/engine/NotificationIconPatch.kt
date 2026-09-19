@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.Icon
+import android.os.Build
 import android.service.notification.StatusBarNotification
 import com.iamcanincan.noticon.graphics.IconBitmap
 import com.iamcanincan.noticon.graphics.ToneCheck
@@ -40,7 +41,7 @@ object NotificationIconPatch {
             }
 
             val smallIcon = notification.smallIcon ?: return
-            val beforeType = smallIcon.type
+            val beforeType = iconType(smallIcon)
 
             // 2) 已经适配过的单色图标不动
             if (options.preserveTinted) {
@@ -49,17 +50,33 @@ object NotificationIconPatch {
             }
 
             // 3) 按策略处理未适配的图标
-            when (options.replacement) {
+            val replaced = when (options.replacement) {
                 ModuleOptions.USE_LAUNCHER_ICON -> useLauncherIcon(pkg, notification, context)
                 ModuleOptions.FORCE_MONOCHROME -> forceMonochrome(smallIcon, notification, context)
+                else -> false
             }
-            ModuleRuntime.logI("patched $pkg $beforeType->${notification.smallIcon?.type}")
+            // 只有真的换了才打日志；跳过的情况不打，免得日志里分不清「换了」和「没动」
+            if (replaced) {
+                ModuleRuntime.logI("patched $pkg $beforeType->${iconType(notification.smallIcon)}")
+            }
         } catch (t: Throwable) {
             ModuleRuntime.logE("patch failed", t)
         }
     }
 
-    private fun useLauncherIcon(pkg: String, notification: Notification, context: Context) {
+    /**
+     * 日志里显示的图标类型。
+     *
+     * Icon.getType() 是 API 28 才公开的，minSdk 26 下直连会 NoSuchMethodError，
+     * 所以这里显式判版本。拿不到就显示 ?，只影响日志，不影响替换逻辑。
+     */
+    private fun iconType(icon: Icon?): String {
+        if (icon == null) return "null"
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return "?"
+        return icon.type.toString()
+    }
+
+    private fun useLauncherIcon(pkg: String, notification: Notification, context: Context): Boolean {
         val packageManager = context.packageManager
         val appInfo = packageManager.getApplicationInfo(pkg, PackageManager.GET_META_DATA)
         val launcherDrawable = packageManager.getApplicationIcon(appInfo)
@@ -68,11 +85,14 @@ object NotificationIconPatch {
             Icon.createWithBitmap(IconBitmap.onPlate(launcherBitmap, PLATE_COLOR)),
             notification
         )
+        return true
     }
 
-    private fun forceMonochrome(smallIcon: Icon, notification: Notification, context: Context) {
-        val bitmap = IconBitmap.decode(smallIcon, context) ?: return
-        if (ToneCheck.isGrayscale(bitmap)) return
+    private fun forceMonochrome(smallIcon: Icon, notification: Notification, context: Context): Boolean {
+        val bitmap = IconBitmap.decode(smallIcon, context) ?: return false
+        // 已经是单色的就不用再压一遍
+        if (ToneCheck.isGrayscale(bitmap)) return false
         IconBitmap.applySmallIcon(Icon.createWithBitmap(IconBitmap.monochrome(bitmap)), notification)
+        return true
     }
 }
