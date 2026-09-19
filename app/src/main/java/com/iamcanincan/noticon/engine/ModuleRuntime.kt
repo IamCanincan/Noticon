@@ -27,5 +27,7 @@ object ModuleRuntime {
 
     fun logI(message: String) = Log.i(TAG, message)
 
+    fun logW(message: String) = Log.w(TAG, message)
+
     fun logE(message: String, cause: Throwable) = Log.e(TAG, message, cause)
 }

@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.drawable.Icon
 import android.service.notification.StatusBarNotification
 import android.view.View
+import android.os.Build
 import android.widget.RemoteViews
 import com.iamcanincan.noticon.util.MemberLookup
 import io.github.libxposed.api.XposedInterface
@@ -33,9 +34,32 @@ object SystemUiHooks {
     private const val STATUS_BAR_ICON_VIEW = "com.android.systemui.statusbar.StatusBarIconView"
     private const val CONTRAST_UTIL = "com.android.internal.util.ContrastColorUtil"
 
+    /** 挂载时会逐个探测这些类是否存在，缺的会打进日志 */
+    private val TARGET_CLASSES = listOf(
+        ROW_BINDER_MODERN, ROW_BINDER_LEGACY, NOTIFICATION_ENTRY,
+        ICON_MANAGER, STATUS_BAR_ICON, STATUS_BAR_ICON_VIEW, CONTRAST_UTIL
+    )
+
     fun install(module: XposedModule, classLoader: ClassLoader) {
+        reportEnvironment(classLoader)
         installRowInflation(module, classLoader)
         installColorRetention(module, classLoader)
+    }
+
+    /**
+     * 挂载前先把环境探一遍，把「哪些类没找到」直接打进日志。
+     *
+     * SystemUI 的类名历代改得很勤，而这一步离线没法验证。真机上只要看一眼
+     * `adb logcat -s Noticon` 开头的 missing: 就知道要换哪个名字，不用猜。
+     */
+    private fun reportEnvironment(classLoader: ClassLoader) {
+        ModuleRuntime.logI("device sdk=${Build.VERSION.SDK_INT} (Android ${Build.VERSION.RELEASE})")
+        val missing = TARGET_CLASSES.filter { MemberLookup.findClass(it, classLoader) == null }
+        if (missing.isEmpty()) {
+            ModuleRuntime.logI("all target classes resolved")
+        } else {
+            for (name in missing) ModuleRuntime.logW("missing class: $name")
+        }
     }
 
     /**

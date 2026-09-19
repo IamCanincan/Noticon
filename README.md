@@ -18,7 +18,27 @@ Android 12 起系统会强行把通知小图标统一着色，没做单色适配
 3. 作用域勾选 **系统界面（SystemUI / com.android.systemui）**。
 4. 重启设备生效。
 
-日志排查：`adb logcat -s Noticon`，正常会看到 `inflateViews hooked` 等字样。
+### 日志排查
+
+```bash
+adb logcat -s Noticon
+```
+
+正常挂载后日志大致是这样：
+
+```
+device sdk=37 (Android 17)
+all target classes resolved
+attaching to SystemUI (api=102, framework=...)
+inflateViews hooked
+setIcon hooked
+updateIconColor hooked
+processSmallIconColor hooked
+```
+
+- 出现 **`missing class: ...`** → 说明该 SystemUI 类在当前系统上改名或换包了，把这一行发出来即可定位改哪个挂钩点。
+- 只有部分 `hooked` → 没挂上的那段功能会缺失（典型表现：图标换成了，但被状态栏染成灰白）。
+- 一行 `hooked` 都没有 → 先确认作用域勾了 **系统界面**，且框架支持 LibXposed API 102。
 
 ## 自行构建
 
