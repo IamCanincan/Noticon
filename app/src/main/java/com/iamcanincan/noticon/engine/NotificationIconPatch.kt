@@ -9,6 +9,7 @@ import android.service.notification.StatusBarNotification
 import com.iamcanincan.noticon.graphics.IconBitmap
 import com.iamcanincan.noticon.graphics.ToneCheck
 import com.iamcanincan.noticon.model.ModuleOptions
+import com.iamcanincan.noticon.util.MemberLookup
 
 /**
  * 通知小图标的修复主体。
@@ -32,8 +33,9 @@ object NotificationIconPatch {
 
             // 1) 排除名单。代发通知（opPkg 与 pkg 不一致）按开关单独决定要不要放行
             if (pkg in options.excludedPackages) {
-                // getOpPkg 在 API 37 源码中仍存在且未废弃，直接调用即可
-                val isProxy = sbn.opPkg != pkg
+                // getOpPkg 直到 API 29 才公开，直接调用在 Android 8/9 上会 NoSuchMethodError
+                val opPkg = MemberLookup.invoke(sbn, "getOpPkg") as? String
+                val isProxy = opPkg != null && opPkg != pkg
                 if (!isProxy || !options.includeProxyNotifications) return
             }
 

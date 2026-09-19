@@ -1,5 +1,6 @@
 package com.iamcanincan.noticon.engine
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.Icon
 import android.service.notification.StatusBarNotification
@@ -95,6 +96,11 @@ object SystemUiHooks {
      * 2. StatusBarIconView#updateIconColor —— 非单色图标不强制设色；
      * 3. Notification.Builder#processSmallIconColor —— 去掉外圈圆底和留白。
      */
+    /**
+     * 要用 getIdentifier 取 SystemUI 内部的资源 id（icon_is_pre_L、left_icon），
+     * 这些 id 不在本模块的编译资源里，只能按名字反查，故抑制 DiscouragedApi。
+     */
+    @SuppressLint("DiscouragedApi")
     private fun installColorRetention(module: XposedModule, classLoader: ClassLoader) {
         val iconManager = MemberLookup.findClass(ICON_MANAGER, classLoader)
         val entryClass = MemberLookup.findClass(NOTIFICATION_ENTRY, classLoader)
@@ -153,6 +159,7 @@ object SystemUiHooks {
         installSmallIconColor(module, classLoader)
     }
 
+    @SuppressLint("DiscouragedApi")
     private fun installSmallIconColor(module: XposedModule, classLoader: ClassLoader) {
         val builderClass = MemberLookup.findClass("android.app.Notification\$Builder", classLoader)
         // 嵌套类的二进制名必须用 $ 分隔，写成 . 会让 loadClass 返回 null

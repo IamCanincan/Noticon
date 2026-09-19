@@ -1,5 +1,6 @@
 package com.iamcanincan.noticon.graphics
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.content.Context
 import android.graphics.Bitmap
@@ -13,6 +14,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
+import android.os.Build
 import androidx.core.content.res.ResourcesCompat
 import com.iamcanincan.noticon.util.MemberLookup
 
@@ -140,32 +142,45 @@ object IconBitmap {
         return result
     }
 
-    /** 把各种载体的 Icon 还原成位图，取不到就返回 null 交给上层跳过 */
+    /**
+     * 把各种载体的 Icon 还原成位图，取不到就返回 null 交给上层跳过。
+     *
+     * getType()/getResId() 是 API 28 才公开的，Android 8.x 上只能走 loadDrawable 兜底，
+     * 所以这里显式判版本而不是指望 catch —— 兜底路径同样能拿到图。
+     */
     fun decode(icon: Icon, context: Context): Bitmap? = try {
-        when (icon.type) {
-            Icon.TYPE_RESOURCE -> fromResources(context, icon.resId)
-            Icon.TYPE_BITMAP, Icon.TYPE_ADAPTIVE_BITMAP -> MemberLookup.readField(icon, "mObj1") as? Bitmap
-            Icon.TYPE_URI, Icon.TYPE_URI_ADAPTIVE_BITMAP -> {
-                val path = MemberLookup.readField(icon, "mString1") as? String
-                if (path != null) BitmapFactory.decodeFile(path) else null
-            }
-            Icon.TYPE_DATA -> {
-                val bytes = MemberLookup.readField(icon, "mObj1") as? ByteArray
-                val offset = MemberLookup.readField(icon, "mInt1") as? Int
-                val length = MemberLookup.readField(icon, "mInt2") as? Int
-                if (bytes != null && offset != null && length != null) {
-                    BitmapFactory.decodeByteArray(bytes, offset, length)
-                } else {
-                    null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            when (icon.type) {
+                Icon.TYPE_RESOURCE -> fromResources(context, icon.resId)
+                Icon.TYPE_BITMAP, Icon.TYPE_ADAPTIVE_BITMAP -> MemberLookup.readField(icon, "mObj1") as? Bitmap
+                Icon.TYPE_URI, Icon.TYPE_URI_ADAPTIVE_BITMAP -> {
+                    val path = MemberLookup.readField(icon, "mString1") as? String
+                    if (path != null) BitmapFactory.decodeFile(path) else null
                 }
+                Icon.TYPE_DATA -> {
+                    val bytes = MemberLookup.readField(icon, "mObj1") as? ByteArray
+                    val offset = MemberLookup.readField(icon, "mInt1") as? Int
+                    val length = MemberLookup.readField(icon, "mInt2") as? Int
+                    if (bytes != null && offset != null && length != null) {
+                        BitmapFactory.decodeByteArray(bytes, offset, length)
+                    } else {
+                        null
+                    }
+                }
+                else -> icon.loadDrawable(context)?.let { rasterize(it) }
             }
-            else -> icon.loadDrawable(context)?.let { rasterize(it) }
+        } else {
+            icon.loadDrawable(context)?.let { rasterize(it) }
         }
     } catch (_: Throwable) {
         null
     }
 
-    /** Notification.mSmallIcon 是私有字段，没有公开 setter，只能反射写 */
+    /**
+     * Notification.mSmallIcon 是私有字段，没有公开 setter，只能反射写。
+     * 这是本模块唯一一处「必须碰私有 API」的地方，没有替代方案，故抑制告警。
+     */
+    @SuppressLint("DiscouragedPrivateApi")
     fun applySmallIcon(icon: Icon, notification: Notification) {
         runCatching {
             val field = Notification::class.java.getDeclaredField("mSmallIcon")
