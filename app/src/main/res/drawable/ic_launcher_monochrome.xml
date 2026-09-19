@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    主题图标（单色版）：与 ic_launcher_foreground 同形，按 alpha 100/67/40/25% 拉开层次。
+    主题图标（单色版）：与 foreground 同形，纯白剪影让系统按主题上色。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -8,19 +8,7 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 左上 #FFFFFF 100% -->
+    <!-- 单气泡剪影（白 100%） -->
     <path android:fillColor="#FFFFFFFF"
-          android:pathData="M31,46 L31,38.5 A2.5,2.5 0 0 1 33.5,36 L40,36 A2,2 0 0 1 42,38 L42,42 A2,2 0 0 1 40,44 L33,44 A2,2 0 0 1 31,46 Z" />
-
-    <!-- 右上 #FFFFFF 67% -->
-    <path android:fillColor="#ABFFFFFF"
-          android:pathData="M48,38 A2,2 0 0 1 50,36 L74.5,36 A2.5,2.5 0 0 1 77,38.5 L77,42 A2,2 0 0 1 75,44 L48,44 L48,38 Z" />
-
-    <!-- 右下 #FFFFFF 40% -->
-    <path android:fillColor="#66FFFFFF"
-          android:pathData="M48,50 L75,50 A2,2 0 0 1 77,52 L77,69.5 A2.5,2.5 0 0 1 74.5,72 L50,72 A2,2 0 0 1 48,70 L48,50 Z" />
-
-    <!-- 左下 #FFFFFF 25% -->
-    <path android:fillColor="#40FFFFFF"
-          android:pathData="M33,50 L40,50 A2,2 0 0 1 42,52 L42,70 A2,2 0 0 1 40,72 L38,72 L34.38,75.45 A2,2 0 0 1 31,74 L31,52 A2,2 0 0 1 33,50 Z" />
+          android:pathData="M31,46 A8,8 0 0 1 39,38 L69,38 A8,8 0 0 1 77,46 L77,62 A8,8 0 0 1 69,70 L43,70 L36.16,77.08 A3,3 0 0 1 31,75 L31,46 Z" />
 </vector>
