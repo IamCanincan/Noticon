@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    主题图标（单色）版：与彩色版同形，但去掉红点/白色铃舌/角标，
-    四色带按 alpha 100/75/50/30 拉开层次，柔和不抢戏。
-    整体仍然零锐角：钟身轮廓与彩色版完全一致。
+    主题图标（单色版）：同形，按 alpha 100/67/40/25% 拉开层次。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -10,16 +8,19 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <clip-path
-        android:pathData="M39,43 C39,35.72 45.72,29 54,29 C62.28,29 69,35.72 69,43 C69,58 80,77 74,77 L34,77 C28,77 39,58 39,43 Z" />
+    <!-- 左上 #FFFFFF 100% -->
+    <path android:fillColor="#FFFFFFFF"
+          android:pathData="M32,46 L32,35 A9,9 0 0 1 41,26 L50,26 A2,2 0 0 1 52,28 L52,42 A2,2 0 0 1 50,44 L34,44 A2,2 0 0 1 32,46 Z" />
 
-    <!-- 用 alpha 而不是颜色来拉开层次（主题图标只取一种颜色） -->
-    <path android:fillColor="#BFFFFFFF"
-          android:pathData="M0,0 L108,0 L108,10.16 L0,72.5 Z" />
-    <path android:fillColor="#80FFFFFF"
-          android:pathData="M0,72.5 L108,10.16 L108,21.7 L0,84.06 Z" />
-    <path android:fillColor="#80FFFFFF"
-          android:pathData="M0,84.06 L108,21.7 L108,33.22 L0,95.61 Z" />
-    <path android:fillColor="#4DFFFFFF"
-          android:pathData="M0,95.61 L108,33.22 L108,108 L0,108 Z" />
+    <!-- 右上 #FFFFFF 67% -->
+    <path android:fillColor="#ABFFFFFF"
+          android:pathData="M56,28 A2,2 0 0 1 58,26 L67,26 A9,9 0 0 1 76,35 L76,42 A2,2 0 0 1 74,44 L56,44 L56,28 Z" />
+
+    <!-- 右下 #FFFFFF 40% -->
+    <path android:fillColor="#66FFFFFF"
+          android:pathData="M56,48 L74,48 A2,2 0 0 1 76,50 L76,57 A9,9 0 0 1 67,66 L58,66 A2,2 0 0 1 56,64 L56,48 Z" />
+
+    <!-- 左下 #FFFFFF 25% -->
+    <path android:fillColor="#40FFFFFF"
+          android:pathData="M34,44 L56,44 L56,64 A2,2 0 0 1 54,66 L46,66 C42,66 36,72 34,76 C33,79 32,75 32,72 L32,46 L34,44 Z" />
 </vector>
