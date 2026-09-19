@@ -19,11 +19,11 @@ data class ModuleOptions(
     /**
      * 跳过系统的统一着色、保住图标原色。
      *
-     * 默认关：默认策略交出去的是单色剪影，本来就该由系统按主题上色
-     * （深色主题白、浅色主题深）。只有改用 USE_LAUNCHER_ICON（塞彩色启动图标）
-     * 时才需要打开，否则系统会把彩色图标又染回单色，白换一场。
+     * 默认开：默认策略塞进去的是彩色的应用图标，不保色的话系统会把它
+     * 又染成单色，等于白换一场。只有改用 FORCE_MONOCHROME（压成单色剪影）
+     * 时才需要关掉 —— 那种形状本来就该由系统按主题上色。
      */
-    var keepOriginalColor: Boolean = false,
+    var keepOriginalColor: Boolean = true,
 
     /** 是否连代发通知（例如推送 SDK 代投、opPkg 与 pkg 不一致）一起处理 */
     var includeProxyNotifications: Boolean = false,
@@ -31,11 +31,11 @@ data class ModuleOptions(
     /**
      * 替换策略，取值见下面的常量。
      *
-     * 默认走「就地压成黑白」：不去碰桌面图标，只把应用自己给的那个彩色小图标
-     * 压成系统认得的单色形状，剩下的交给系统按主题着色。
-     * 通知里的图标因此始终是黑白的，和原生适配过的应用长得一样。
+     * 默认走「直接换成桌面上那个应用图标」：未适配的小图标本来就是一坨看不出
+     * 是谁的色块，用用户天天在桌面上见到、认得的那个图标替掉最直观。
+     * 彩色原样保留（配合 [keepOriginalColor]），不做任何去色处理。
      */
-    var replacement: Int = FORCE_MONOCHROME,
+    var replacement: Int = USE_LAUNCHER_ICON,
 
     /** 永不处理的应用包名 */
     var excludedPackages: Set<String> = emptySet()

@@ -15,7 +15,6 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import androidx.core.content.res.ResourcesCompat
 import com.iamcanincan.noticon.util.MemberLookup
-import kotlin.math.abs
 
 /**
  * 图标位图的取与造。
@@ -34,8 +33,11 @@ object IconBitmap {
     /** alpha 低于这个值就当透明，不算图形的一部分 —— 用来滤掉图标自带的半透明投影 */
     private const val MIN_SHAPE_ALPHA = 128
 
-    /** 与底板色的 RGB 差之和超过这个值才算图形，只在整张图标都不透明时用得上 */
-    private const val PLATE_DELTA = 90
+    /**
+     * 不透明像素占比超过这个值，就认为整张是个实心块（圆形/方形实心图标）。
+     * 这类图标的 alpha 只描述外轮廓，照搬 alpha 压出来就是一坨白块。
+     */
+    private const val SOLID_SHAPE_LIMIT = 0.7f
 
     /**
      * 把 Drawable 画成指定边长的方形位图。
@@ -138,25 +140,17 @@ object IconBitmap {
             if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) transparentCount++
         }
 
-        if (transparentCount > pixels.size / 20) {
-            // 自带透明区域 → alpha 就是最准的遮罩，直接照搬
+        val total = pixels.size
+        val solidRatio = (total - transparentCount).toFloat() / total
+        val useAlpha = transparentCount > total / 20 && solidRatio < SOLID_SHAPE_LIMIT
+        if (useAlpha) {
+            // 透明底上的图形：alpha 本身就是最准的轮廓
             for (i in pixels.indices) {
                 if (Color.alpha(pixels[i]) >= MIN_SHAPE_ALPHA) outputPixels[i] = Color.WHITE
             }
         } else {
-            // 整张不透明：拿四边的平均色当底板色，和它差得远的才是图形
-            val plate = edgeAverage(pixels, w, h)
-            val plateR = Color.red(plate)
-            val plateG = Color.green(plate)
-            val plateB = Color.blue(plate)
-            for (i in pixels.indices) {
-                val pixel = pixels[i]
-                if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
-                val delta = abs(Color.red(pixel) - plateR) +
-                        abs(Color.green(pixel) - plateG) +
-                        abs(Color.blue(pixel) - plateB)
-                if (delta > PLATE_DELTA) outputPixels[i] = Color.WHITE
-            }
+            // 实心图标：alpha 只描述外轮廓，照搬就是一坨白块，改用二值化挖图形
+            binarize(pixels, outputPixels)
         }
 
         val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -193,29 +187,68 @@ object IconBitmap {
         return result
     }
 
-    /** 采样四条边的平均色，当作不透明图标的底板色 */
-    private fun edgeAverage(pixels: IntArray, w: Int, h: Int): Int {
-        var r = 0L
-        var g = 0L
-        var b = 0L
-        var count = 0
-        fun take(index: Int) {
-            val pixel = pixels[index]
-            if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) return
-            r += Color.red(pixel)
-            g += Color.green(pixel)
-            b += Color.blue(pixel)
-            count++
+    /**
+     * 亮度二值化，给实心图标挖出里面的图形。
+     *
+     * 阈值不拍脑袋定常数，用 Otsu 自动求（让前后景的类间方差最大），
+     * 各种配色的图标都能自适应。图形通常占比较少，据此决定留暗部还是亮部。
+     */
+    private fun binarize(pixels: IntArray, output: IntArray) {
+        val threshold = otsuThreshold(pixels)
+        var dark = 0
+        var light = 0
+        for (pixel in pixels) {
+            if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
+            if (luma(pixel) < threshold) dark++ else light++
         }
-        for (x in 0 until w) {
-            take(x)
-            take((h - 1) * w + x)
+        if (dark + light == 0) return
+        val keepDark = dark <= light
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
+            val isShape = if (keepDark) luma(pixel) < threshold else luma(pixel) >= threshold
+            if (isShape) output[i] = Color.WHITE
         }
-        for (y in 0 until h) {
-            take(y * w)
-            take(y * w + w - 1)
+    }
+
+    private fun luma(pixel: Int): Int {
+        return (Color.red(pixel) * 299 + Color.green(pixel) * 587 + Color.blue(pixel) * 114) / 1000
+    }
+
+    /** Otsu：遍历所有可能阈值，取类间方差最大的那个 */
+    private fun otsuThreshold(pixels: IntArray): Int {
+        val histogram = IntArray(256)
+        var total = 0
+        for (pixel in pixels) {
+            if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
+            histogram[luma(pixel)]++
+            total++
         }
-        return if (count == 0) Color.BLACK else Color.rgb((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
+        if (total == 0) return 128
+
+        var sum = 0
+        for (i in 0..255) sum += i * histogram[i]
+
+        var sumBackground = 0
+        var weightBackground = 0
+        var maxVariance = 0.0
+        var threshold = 128
+        for (t in 0..255) {
+            weightBackground += histogram[t]
+            if (weightBackground == 0) continue
+            val weightForeground = total - weightBackground
+            if (weightForeground == 0) break
+            sumBackground += t * histogram[t]
+            val meanBackground = sumBackground.toDouble() / weightBackground
+            val meanForeground = (sum - sumBackground).toDouble() / weightForeground
+            val variance = weightBackground.toDouble() * weightForeground *
+                    (meanBackground - meanForeground) * (meanBackground - meanForeground)
+            if (variance > maxVariance) {
+                maxVariance = variance
+                threshold = t
+            }
+        }
+        return threshold
     }
 
     /**

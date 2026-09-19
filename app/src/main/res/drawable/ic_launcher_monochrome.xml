@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    主题图标（Android 13+）用的单色版：系统只取 alpha 通道着色，
-    所以四块用不同不透明度拉开层次，否则紧挨在一起会糊成一整片。
+    主题图标（Android 13+）用的单色版，形状与彩色版完全一致。
+
+    系统只取 alpha 通道着色，颜色写什么都会被丢掉，所以四片用不同
+    不透明度（100 / 75 / 50 / 35%）拉开层次 —— 否则四片连成一个整圆，
+    看不出里面还有结构。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -9,19 +12,36 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M32,24 h12 a8,8 0 0 1 8,8 v12 a8,8 0 0 1 -8,8 h-12 a8,8 0 0 1 -8,-8 v-12 a8,8 0 0 1 8,-8 z" />
+    <group>
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+    </group>
 
-    <path
-        android:fillColor="#CCFFFFFF"
-        android:pathData="M64,24 h12 a8,8 0 0 1 8,8 v12 a8,8 0 0 1 -8,8 h-12 a8,8 0 0 1 -8,-8 v-12 a8,8 0 0 1 8,-8 z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="90">
+        <path
+            android:fillColor="#BFFFFFFF"
+            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+    </group>
 
-    <path
-        android:fillColor="#99FFFFFF"
-        android:pathData="M32,56 h12 a8,8 0 0 1 8,8 v12 a8,8 0 0 1 -8,8 h-12 a8,8 0 0 1 -8,-8 v-12 a8,8 0 0 1 8,-8 z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="180">
+        <path
+            android:fillColor="#80FFFFFF"
+            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+    </group>
 
-    <path
-        android:fillColor="#66FFFFFF"
-        android:pathData="M64,56 h12 a8,8 0 0 1 8,8 v12 a8,8 0 0 1 -8,8 h-12 a8,8 0 0 1 -8,-8 v-12 a8,8 0 0 1 8,-8 z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="270">
+        <path
+            android:fillColor="#59FFFFFF"
+            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+    </group>
 </vector>

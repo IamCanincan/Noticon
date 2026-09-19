@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    四个圆角方块，Google 品牌四色：
-      blue #4285F4 / red #EA4335 / yellow #FBBC05 / green #34A853
+    四色风车：Google 品牌四色 蓝 / 红 / 黄 / 绿 各占一片，绕中心旋转排布。
 
-    每块 28x28、圆角 8、间隙 4，整体落在 24..84 —— 正好吃满
-    自适应图标的可视区（21..87），小尺寸下不会缩成一团。
+    刻意不做成 2x2 网格 —— 四个等大方块摆在一起，一眼就是微软磁贴。
+    这里每片的内边是弧线而不是直半径，四片一样大、绕中心转，
+    看上去是一个整体在旋转，而不是四块拼出来的。
+
+    四片其实由同一条路径旋转 0 / 90 / 180 / 270 得到，
+    要调形状只需要改那一条 pathData，四片会一起跟着变。
+
+    外接圆半径 30（落在 24..84），在自适应图标 66dp 安全圈（半径 33）以内，不会被裁。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -12,19 +17,36 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <path
-        android:fillColor="#4285F4"
-        android:pathData="M32,24 h12 a8,8 0 0 1 8,8 v12 a8,8 0 0 1 -8,8 h-12 a8,8 0 0 1 -8,-8 v-12 a8,8 0 0 1 8,-8 z" />
+    <group>
+        <path
+            android:fillColor="#4285F4"
+            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+    </group>
 
-    <path
-        android:fillColor="#EA4335"
-        android:pathData="M64,24 h12 a8,8 0 0 1 8,8 v12 a8,8 0 0 1 -8,8 h-12 a8,8 0 0 1 -8,-8 v-12 a8,8 0 0 1 8,-8 z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="90">
+        <path
+            android:fillColor="#EA4335"
+            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+    </group>
 
-    <path
-        android:fillColor="#FBBC05"
-        android:pathData="M32,56 h12 a8,8 0 0 1 8,8 v12 a8,8 0 0 1 -8,8 h-12 a8,8 0 0 1 -8,-8 v-12 a8,8 0 0 1 8,-8 z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="180">
+        <path
+            android:fillColor="#FBBC05"
+            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+    </group>
 
-    <path
-        android:fillColor="#34A853"
-        android:pathData="M64,56 h12 a8,8 0 0 1 8,8 v12 a8,8 0 0 1 -8,8 h-12 a8,8 0 0 1 -8,-8 v-12 a8,8 0 0 1 8,-8 z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="270">
+        <path
+            android:fillColor="#34A853"
+            android:pathData="M54,54 L54,24 A30,30 0 0 1 84,54 C76,46 64,50 54,54 Z" />
+    </group>
 </vector>
