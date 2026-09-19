@@ -37,8 +37,9 @@ adb logcat -s Noticon -d | grep patched
 
 1. 安装 `Noticon-v1.0-release.apk`（或用 `./gradlew assembleDebug` 自行构建）。
 2. 在 **LSPosed / Vector**（或其他支持 LibXposed API 102 的框架）中启用 Noticon。
-3. 作用域勾选 **系统界面（SystemUI / com.android.systemui）**。
-4. 重启设备生效。
+3. **不用勾作用域**：模块通过 `staticScope=true` + `META-INF/xposed/scope.list` 把
+   作用域写死成 `com.android.systemui`，管理器里只会列出系统界面这一项，也不会让你勾到别的应用。
+4. 重启设备（或只重启 SystemUI）生效。
 
 ### 日志排查
 
@@ -52,11 +53,18 @@ adb logcat -s Noticon -d | grep patched
 
 ```bash
 adb install -r Noticon-v1.0-release.apk
-# 在框架里启用 Noticon，作用域勾「系统界面」
+# 在框架里启用 Noticon（作用域已固定为系统界面，不用勾）
 adb logcat -c
-adb shell kill $(adb shell pidof com.android.systemui)   # 或 adb reboot
+adb shell am force-stop com.android.systemui   # 或 adb reboot
 adb logcat -s Noticon -d
 ```
+
+两点说明：
+
+- 重启 SystemUI 要用 `am force-stop`，**不要**用 `kill $(pidof com.android.systemui)` ——
+  shell 用户没有给 SystemUI 发信号的权限，会报 `Operation not permitted`。
+- 若 `adb devices` 一直起不来（Windows 上默认端口 5037 可能落在系统保留端口段内），
+  给所有 adb 命令加上 `-P 5039`，例如 `adb -P 5039 logcat -s Noticon -d`。
 
 正常挂载后日志大致是这样：
 
@@ -72,7 +80,7 @@ processSmallIconColor hooked
 
 - 出现 **`missing class: ...`** → 说明该 SystemUI 类在当前系统上改名或换包了，把这一行发出来即可定位改哪个挂钩点。
 - 只有部分 `hooked` → 没挂上的那段功能会缺失（典型表现：图标换成了，但被状态栏染成灰白）。
-- 一行 `hooked` 都没有 → 先确认作用域勾了 **系统界面**，且框架支持 LibXposed API 102。
+- 一行 `hooked` 都没有 → 先确认模块已在框架里**启用**，且框架支持 LibXposed API 102（作用域不用管，已写死）。
 
 ## 自行构建
 

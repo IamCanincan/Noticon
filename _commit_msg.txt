@@ -1,0 +1,34 @@
+fix: 复查全项目后的 6 处修正
+
+用户要求「再检查一下所有东西」，逐项排查源码、构建配置、脚本、文档、
+git 历史后的修正。lint 0 issue，构建通过。
+
+1) SystemUiHooks：三条钩子漏了重复安装判重
+   inflateViews 有 hookedMethods 判重，但 setIcon / updateIconColor /
+   processSmallIconColor 没有。框架对同一进程会回调 onPackageReady 数次
+   （实测 Vector 2~3 次），于是这三条各被装了多遍，拦截逻辑跟着跑多遍、
+   日志也重复刷（真机上见到 10 行 hooked 而非 4 行）。
+   三处拦截都是幂等的，不会出错，但按 id 判重后只装一次。
+
+2) IconBitmap.applySmallIcon 改为返回 Boolean
+   原来反射写 mSmallIcon 失败（定制系统改过字段名）时静默吞掉，
+   上层照样返回 true、照样打 patched —— 这是排查时唯一的「真的换了」凭据，
+   报假阳性会把排查带偏。现在写失败就返回 false，不打日志。
+
+3) ModuleOptions：LAUNCHER_ICON_MONOCHROME 的注释错标「（默认）」，
+   实际默认是 USE_LAUNCHER_ICON（README 的表格是对的）。删掉错误标注。
+
+4) scripts/check-device.sh 三处过时：
+   - 没带 adb 端口：本机默认 5037 落在 Windows 保留端口段，server 起不来，
+     所有命令都会失败。改成统一走 ADB_PORT（默认 5039）。
+   - 用 `shell kill <pid>` 重启 SystemUI：shell 用户无权，
+     报 Operation not permitted。改成 am force-stop。
+   - 提示「Scope -> tick SystemUI」：staticScope=true 后作用域是写死的，
+     不用勾。改成说明性文字。
+
+5) README 三处过时：安装步骤里「作用域勾选」改成「不用勾」并说明原因；
+   手动排查命令 kill -> am force-stop，并补 adb 端口说明；
+   「一行 hooked 都没有」的排查建议里去掉「确认作用域勾了」。
+
+6) .gitignore 补 .kotlin/（AGP 9 会在项目根生成，之前一直是未跟踪状态）。
+   另：metadata 里 LibXposed API 100+ 统一改成 102（minApiVersion 就是 102）。

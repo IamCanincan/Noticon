@@ -80,8 +80,7 @@ object NotificationIconPatch {
         val launcherDrawable = packageManager.getApplicationIcon(appInfo)
         // 自适应图标光栅化后四周空一圈，先裁掉再放大填满，否则通知里那个图标会很小
         val launcherBitmap = IconBitmap.fill(IconBitmap.rasterize(launcherDrawable))
-        IconBitmap.applySmallIcon(Icon.createWithBitmap(launcherBitmap), notification)
-        return true
+        return IconBitmap.applySmallIcon(Icon.createWithBitmap(launcherBitmap), notification)
     }
 
     /**
@@ -100,15 +99,13 @@ object NotificationIconPatch {
         val launcherDrawable = packageManager.getApplicationIcon(appInfo)
         // 只取前景层，再裁掉四周空白放大填满，最后去掉颜色只留明暗
         val filled = IconBitmap.fill(IconBitmap.foregroundOf(launcherDrawable))
-        IconBitmap.applySmallIcon(Icon.createWithBitmap(IconBitmap.grayscale(filled)), notification)
-        return true
+        return IconBitmap.applySmallIcon(Icon.createWithBitmap(IconBitmap.grayscale(filled)), notification)
     }
 
     private fun forceMonochrome(smallIcon: Icon, notification: Notification, context: Context): Boolean {
         val bitmap = IconBitmap.decode(smallIcon, context) ?: return false
         // 已经是单色的就不用再压一遍
         if (ToneCheck.isGrayscale(bitmap)) return false
-        IconBitmap.applySmallIcon(Icon.createWithBitmap(IconBitmap.monochrome(bitmap)), notification)
-        return true
+        return IconBitmap.applySmallIcon(Icon.createWithBitmap(IconBitmap.monochrome(bitmap)), notification)
     }
 }

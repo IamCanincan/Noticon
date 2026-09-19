@@ -47,7 +47,7 @@ data class ModuleOptions(
         /** 未适配 → 把应用自己给的那个小图标就地压成单色 */
         const val FORCE_MONOCHROME = 1
 
-        /** 未适配 → 用桌面应用图标生成单色剪影（默认） */
+        /** 未适配 → 用桌面应用图标生成单色剪影（保留明暗，不是纯剪影） */
         const val LAUNCHER_ICON_MONOCHROME = 2
     }
 }

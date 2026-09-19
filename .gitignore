@@ -21,6 +21,8 @@ release/
 # Gradle files
 .gradle/
 build/
+# Kotlin 增量编译的会话缓存，AGP 9 会在项目根生成
+.kotlin/
 
 # Local configuration file (sdk path, etc.)
 local.properties

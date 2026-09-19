@@ -13,7 +13,7 @@ Android 12 and later force-tint notification small icons: apps that didn't ship 
 
 ## Requirements
 
-- LibXposed API 100+ (LSPosed, Vector, etc.)
+- LibXposed API 102+ (LSPosed, Vector, etc.)
 - Android 8.0 (API 26) or later
 - Status bar / lock screen permission for the chosen framework
 

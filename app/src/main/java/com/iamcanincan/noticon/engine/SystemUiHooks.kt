@@ -38,6 +38,17 @@ object SystemUiHooks {
     /** 已挂过的方法，防止框架重复回调时重复挂钩 */
     private val hookedMethods = HashSet<java.lang.reflect.Method>()
 
+    /**
+     * 已装过的挂钩 id。
+     *
+     * 框架会多次回调 onPackageReady（实测 Vector 一个进程回调 2~3 次）。
+     * inflateViews 可以按 Method 对象判重（同一个方法对象只会拿到一次），
+     * 但下面这几个是「按名字现找」的，找不到-object 级别的稳定标识，
+     * 只能按 id 判重 —— 否则同一条钩子会被装两遍，拦截逻辑跟着跑两遍。
+     * （三处拦截都是幂等的，不会出错，但白白多跑一次，日志也会重复刷。）
+     */
+    private val installedHookIds = HashSet<String>()
+
     /** 挂载时会逐个探测这些类是否存在，缺的会打进日志 */
     private val TARGET_CLASSES = listOf(
         ROW_BINDER_MODERN, ROW_BINDER_LEGACY, NOTIFICATION_ENTRY,
@@ -156,7 +167,7 @@ object SystemUiHooks {
             null
         }
 
-        if (setIcon != null) {
+        if (setIcon != null && installedHookIds.add("setIcon")) {
             module.hook(setIcon).setId("setIcon").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
                 if (shouldKeepColor()) {
                     for (arg in chain.args) {
@@ -187,6 +198,7 @@ object SystemUiHooks {
             ModuleRuntime.logW("ContrastColorUtil not found, updateIconColor skipped")
             return
         }
+        if (!installedHookIds.add("updateIconColor")) return
         MemberLookup.methodWithParams(iconView, "updateIconColor")?.let { method ->
             module.hook(method).setId("updateIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
                 if (shouldKeepColor()) {
@@ -230,6 +242,7 @@ object SystemUiHooks {
         } else {
             null
         } ?: fallbackSmallIconColor(builderClass) ?: return
+        if (!installedHookIds.add("processSmallIconColor")) return
 
         module.hook(method).setId("processSmallIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
             if (shouldKeepColor()) {

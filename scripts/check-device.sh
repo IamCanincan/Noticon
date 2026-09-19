@@ -11,6 +11,12 @@ set -uo pipefail
 APK="Noticon-v1.0-release.apk"
 OUT="noticon.log"
 
+# adb server port. The default 5037 falls inside the Windows excluded port range
+# on some machines (netsh interface ipv4 show excludedportrange protocol=tcp),
+# where bind() fails with 10013 and the server never comes up. 5039 is outside
+# that range. Override with: ADB_PORT=5037 ./scripts/check-device.sh
+ADB_PORT="${ADB_PORT:-5039}"
+
 # --- locate adb -------------------------------------------------------------
 ADB=""
 for c in \
@@ -26,13 +32,18 @@ if [ -z "$ADB" ]; then
   echo "adb not found. Install Android SDK platform-tools or set ANDROID_HOME."
   exit 1
 fi
-echo "adb: $ADB"
+
+# Every call must carry -P <port>, otherwise adb talks to the default-port
+# server (which may be a different, dead one) instead of the one we started.
+adb() { "$ADB" -P "$ADB_PORT" "$@"; }
+
+echo "adb: $ADB  (port $ADB_PORT)"
 
 # --- device present? --------------------------------------------------------
-DEVICE=$("$ADB" devices | awk 'NR>1 && $2=="device" {print $1; exit}')
+DEVICE=$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')
 if [ -z "$DEVICE" ]; then
   echo "No authorized device. Check: USB debugging on, RSA prompt accepted."
-  "$ADB" devices
+  adb devices
   exit 1
 fi
 echo "device: $DEVICE"
@@ -43,14 +54,15 @@ if [ ! -f "$APK" ]; then
   exit 1
 fi
 echo "==> installing $APK"
-"$ADB" install -r "$APK" || { echo "install failed"; exit 1; }
+adb install -r "$APK" || { echo "install failed"; exit 1; }
 
 # --- manual step ------------------------------------------------------------
 echo
 echo "==== MANUAL STEP (cannot be done over adb) ===="
 echo "1. Open your Xposed manager (LSPosed / Vector)"
 echo "2. Modules -> enable Noticon"
-echo "3. Scope -> tick 'SystemUI' / 'com.android.systemui'"
+echo "   (no scope to tick: the module declares staticScope=true and ships a"
+echo "    fixed scope.list containing only com.android.systemui)"
 echo "==============================================="
 read -r -p "Press Enter when done... "
 
@@ -62,29 +74,30 @@ echo "  2) full reboot            (more reliable)"
 read -r -p "Choose 1 or 2 [1]: " MODE
 MODE=${MODE:-1}
 
-"$ADB" logcat -c
+adb logcat -c
 
 if [ "$MODE" = "2" ]; then
   echo "==> rebooting, wait for the device to come back..."
-  "$ADB" reboot
-  "$ADB" wait-for-device
+  adb reboot
+  adb wait-for-device
   sleep 25
 else
-  echo "==> restarting SystemUI"
-  PID=$("$ADB" shell pidof com.android.systemui | tr -d '\r')
-  if [ -n "$PID" ]; then
-    "$ADB" shell kill "$PID" || true
-  else
-    echo "could not find SystemUI pid, falling back to reboot"
-    "$ADB" reboot
-    "$ADB" wait-for-device
-  fi
+  # Note: do NOT use `shell kill <pid>` here. The shell user is not allowed to
+  # signal the SystemUI process ("Operation not permitted"); force-stop lets the
+  # framework kill and respawn it instead.
+  echo "==> restarting SystemUI (force-stop)"
+  adb shell am force-stop com.android.systemui || {
+    echo "force-stop failed, falling back to reboot"
+    adb reboot
+    adb wait-for-device
+    sleep 25
+  }
   sleep 12
 fi
 
 # --- collect ----------------------------------------------------------------
 echo "==> collecting log"
-"$ADB" logcat -s Noticon -d > "$OUT" 2>&1
+adb logcat -s Noticon -d > "$OUT" 2>&1
 
 echo
 echo "----- $OUT -----"
@@ -93,9 +106,9 @@ echo "----------------"
 LINES=$(grep -c . "$OUT" || true)
 if [ "${LINES:-0}" -eq 0 ]; then
   echo "No output. Likely causes:"
-  echo "  - module not enabled, or SystemUI not in scope"
+  echo "  - module not enabled in the manager"
   echo "  - framework does not support LibXposed API 102"
-  echo "  - SystemUI had not finished restarting yet (try again: adb logcat -s Noticon)"
+  echo "  - SystemUI had not finished restarting yet (try again: adb -P $ADB_PORT logcat -s Noticon)"
 else
   echo "Saved to $OUT - paste it back for analysis."
 fi

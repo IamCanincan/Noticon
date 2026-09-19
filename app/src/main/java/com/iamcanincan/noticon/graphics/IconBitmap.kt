@@ -288,14 +288,17 @@ object IconBitmap {
     /**
      * Notification.mSmallIcon 是私有字段，没有公开 setter，只能反射写。
      * 这是本模块唯一一处「必须碰私有 API」的地方，没有替代方案，故抑制告警。
+     *
+     * 返回是否真的写进去了：某些定制系统改过这个字段，反射会失败。
+     * 上层靠这个返回值决定要不要打 patched 日志，写失败就不该报成功 ——
+     * patched 是排查时唯一的「真的换了」凭据，报假阳性会让排查走错方向。
      */
     @SuppressLint("DiscouragedPrivateApi")
-    fun applySmallIcon(icon: Icon, notification: Notification) {
-        runCatching {
-            val field = Notification::class.java.getDeclaredField("mSmallIcon")
-            field.isAccessible = true
-            field.set(notification, icon)
-        }
-    }
+    fun applySmallIcon(icon: Icon, notification: Notification): Boolean = runCatching {
+        val field = Notification::class.java.getDeclaredField("mSmallIcon")
+        field.isAccessible = true
+        field.set(notification, icon)
+        true
+    }.getOrDefault(false)
 
 }
