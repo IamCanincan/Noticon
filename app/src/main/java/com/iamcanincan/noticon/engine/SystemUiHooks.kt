@@ -3,14 +3,14 @@ package com.iamcanincan.noticon.engine
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.Icon
+import android.os.Build
 import android.service.notification.StatusBarNotification
 import android.view.View
-import android.os.Build
 import android.widget.RemoteViews
 import com.iamcanincan.noticon.util.MemberLookup
-import java.lang.reflect.Method
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
+import java.lang.reflect.Method
 
 /**
  * 往 SystemUI 里装挂钩。
@@ -91,8 +91,10 @@ object SystemUiHooks {
 
         for (method in overloads) {
             method.isAccessible = true
+            // id 必须各不相同，多个重载不能共用同一个 hook id
+            val hookId = "inflateViews[${method.parameterTypes.joinToString { it.simpleName }}]"
 
-            module.hook(method).setId("inflateViews").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
+            module.hook(method).setId(hookId).setExceptionMode(EXCEPTION_MODE).intercept { chain ->
                 captureSystemContext(chain.thisObject)
 
                 for (arg in chain.args) {
@@ -131,8 +133,7 @@ object SystemUiHooks {
      * 1. IconManager#setIcon —— 打上 icon_is_pre_L 标记，跳过统一着色；
      * 2. StatusBarIconView#updateIconColor —— 非单色图标不强制设色；
      * 3. Notification.Builder#processSmallIconColor —— 去掉外圈圆底和留白。
-     */
-    /**
+     *
      * 要用 getIdentifier 取 SystemUI 内部的资源 id（icon_is_pre_L、left_icon），
      * 这些 id 不在本模块的编译资源里，只能按名字反查，故抑制 DiscouragedApi。
      */
@@ -174,8 +175,13 @@ object SystemUiHooks {
     }
 
     private fun hookUpdateIconColor(module: XposedModule, classLoader: ClassLoader, iconView: Class<*>) {
+        // 灰度判定要用系统的 ContrastColorUtil，拿不到就没法判断，这一钩直接跳过
+        val contrastUtil = MemberLookup.findClass(CONTRAST_UTIL, classLoader)
+        if (contrastUtil == null) {
+            ModuleRuntime.logW("ContrastColorUtil not found, updateIconColor skipped")
+            return
+        }
         MemberLookup.methodWithParams(iconView, "updateIconColor")?.let { method ->
-            val contrastUtil = MemberLookup.findClass(CONTRAST_UTIL, classLoader)
             module.hook(method).setId("updateIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
                 if (shouldKeepColor()) {
                     runCatching {
@@ -184,10 +190,10 @@ object SystemUiHooks {
                         if (sbn != null && sbn.packageName != "android") {
                             val context = view.context
                             val instance = MemberLookup.invokeStatic(
-                                contrastUtil!!, "getInstance", arrayOf(context), Context::class.java
-                            )
+                                contrastUtil, "getInstance", arrayOf(context), Context::class.java
+                            ) ?: return@runCatching
                             val isGrayscale = MemberLookup.invoke(
-                                instance!!, "isGrayscaleIcon",
+                                instance, "isGrayscaleIcon",
                                 arrayOf(context, sbn.notification.smallIcon),
                                 Context::class.java, Icon::class.java
                             ) as? Boolean
