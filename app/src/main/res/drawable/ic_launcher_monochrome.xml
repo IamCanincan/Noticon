@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    主题图标（单色版）：与 foreground 同字形（Google Sans Flex Bold N），纯白剪影让系统按主题上色。
+    主题图标（单色版）：与 foreground 同形（粉环 + 黑 N），纯白剪影让系统按主题上色。
+    包括底圆 + 环（evenOdd） + 字符三个 path，全部白色。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -8,7 +9,16 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Google Sans Flex Bold 700 的 "N" 剪影（白 100%） -->
+    <!-- 1. 底圆（白） -->
     <path android:fillColor="#FFFFFFFF"
-          android:pathData="M67.41 66.98Q67.41 70 67.41 70Q67.41 70 64.09 70Q60.77 70 60.77 70Q60.77 70 59.03 67.26L47.89 49.66H47.6L47.77 54.67V66.65Q47.77 70 47.77 70Q47.77 70 44.19 70Q40.61 70 40.61 70Q40.61 70 40.61 66.65L40.59 42.63Q40.59 38 40.59 38Q40.59 38 44.35 38Q48.11 38 48.11 38Q48.11 38 49.83 40.72L60.46 57.53H60.73L60.54 52.45V41.22Q60.54 38 60.54 38Q60.54 38 63.97 38Q67.41 38 67.41 38Q67.41 38 67.41 41.22Z" />
+          android:pathData="M54,24 A30,30 0 0 1 54,84 A30,30 0 0 1 54,24 Z" />
+
+    <!-- 2. 圆环（白，evenOdd 挖空） -->
+    <path android:fillColor="#FFFFFFFF"
+          android:fillType="evenOdd"
+          android:pathData="M54,24 A30,30 0 0 1 54,84 A30,30 0 0 1 54,24 Z M54,28.5 A25.5,25.5 0 0 1 54,79.5 A25.5,25.5 0 0 1 54,28.5 Z" />
+
+    <!-- 3. 字符 N（白） -->
+    <path android:fillColor="#FFFFFFFF"
+          android:pathData="M64.89 64.55Q64.89 67 64.89 67Q64.89 67 62.2 67Q59.5 67 59.5 67Q59.5 67 58.09 64.78L49.03 50.48H48.8L48.93 54.54V64.28Q48.93 67 48.93 67Q48.93 67 46.03 67Q43.12 67 43.12 67Q43.12 67 43.12 64.28L43.11 44.76Q43.11 41 43.11 41Q43.11 41 46.16 41Q49.22 41 49.22 41Q49.22 41 50.61 43.21L59.25 56.87H59.47L59.31 52.74V43.61Q59.31 41 59.31 41Q59.31 41 62.1 41Q64.89 41 64.89 41Q64.89 41 64.89 43.61Z" />
 </vector>
