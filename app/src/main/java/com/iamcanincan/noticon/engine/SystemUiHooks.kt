@@ -35,6 +35,9 @@ object SystemUiHooks {
     private const val STATUS_BAR_ICON_VIEW = "com.android.systemui.statusbar.StatusBarIconView"
     private const val CONTRAST_UTIL = "com.android.internal.util.ContrastColorUtil"
 
+    /** 已挂过的方法，防止框架重复回调时重复挂钩 */
+    private val hookedMethods = HashSet<java.lang.reflect.Method>()
+
     /** 挂载时会逐个探测这些类是否存在，缺的会打进日志 */
     private val TARGET_CLASSES = listOf(
         ROW_BINDER_MODERN, ROW_BINDER_LEGACY, NOTIFICATION_ENTRY,
@@ -91,6 +94,9 @@ object SystemUiHooks {
 
         for (method in overloads) {
             method.isAccessible = true
+            // 框架会对同一个进程多次回调 onPackageReady（实测 Vector 会调 2~3 次），
+            // 不判重就会把同一个方法挂多次，导致每条通知被重复处理
+            if (!hookedMethods.add(method)) continue
             // id 必须各不相同，多个重载不能共用同一个 hook id
             val hookId = "inflateViews[${method.parameterTypes.joinToString { it.simpleName }}]"
 

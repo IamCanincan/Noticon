@@ -52,6 +52,7 @@ object NotificationIconPatch {
                 ModuleOptions.USE_LAUNCHER_ICON -> useLauncherIcon(pkg, notification, context)
                 ModuleOptions.FORCE_MONOCHROME -> forceMonochrome(smallIcon, notification, context)
             }
+            ModuleRuntime.logI("patched $pkg")
         } catch (t: Throwable) {
             ModuleRuntime.logE("patch failed", t)
         }
