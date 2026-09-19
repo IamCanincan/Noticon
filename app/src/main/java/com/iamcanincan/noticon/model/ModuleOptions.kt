@@ -31,11 +31,11 @@ data class ModuleOptions(
     /**
      * 替换策略，取值见下面的常量。
      *
-     * 默认走「用桌面图标生成单色剪影」：轮廓取自用户认得的桌面图标，
-     * 但交出去的是纯 alpha 的黑白剪影，由系统按主题统一着色 ——
-     * 既一眼认得出是哪个应用，又和那些本来就适配好的图标长得一样。
+     * 默认走「就地压成黑白」：不去碰桌面图标，只把应用自己给的那个彩色小图标
+     * 压成系统认得的单色形状，剩下的交给系统按主题着色。
+     * 通知里的图标因此始终是黑白的，和原生适配过的应用长得一样。
      */
-    var replacement: Int = LAUNCHER_ICON_MONOCHROME,
+    var replacement: Int = FORCE_MONOCHROME,
 
     /** 永不处理的应用包名 */
     var excludedPackages: Set<String> = emptySet()
