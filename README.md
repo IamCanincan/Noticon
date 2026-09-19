@@ -87,6 +87,10 @@ com.iamcanincan.noticon
 
 行为调整直接改 `ModuleOptions` 的默认值即可，不需要额外配置渠道。
 
+## 许可
+
+[MIT](LICENSE)。
+
 ## 签名密钥
 
 `noticon-release.jks` 是本模块的自签名密钥（密码均为 `noticon`），已被 `.gitignore` 排除、不会入库。
