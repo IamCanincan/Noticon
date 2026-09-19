@@ -1,5 +1,8 @@
 name: Build APK
 
+# 只做构建与校验：产物仅作为 artifact 上传（90 天后自动过期）。
+# 不会创建 GitHub Release、不会打 tag、不会发布到任何地方 —— 发版一律由维护者手动进行。
+
 on:
   push:
     branches: [ master, main ]
@@ -34,9 +37,10 @@ jobs:
           name: Noticon-debug
           path: app/build/outputs/apk/debug/*.apk
 
-  # release 走 R8：入口类一旦被混淆重命名，java_init.list 会被同步改成混淆名，
+  # 这里的 release 指的是 release 构建变体（走 R8），不是发版。
+  # R8 若把入口类混淆重命名，java_init.list 会被同步改成混淆名，
   # 模块就整个加载不起来，而且不报错。这一步专门挡这个回归。
-  release:
+  release-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
