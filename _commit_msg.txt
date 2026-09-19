@@ -1,0 +1,35 @@
+refactor: 图标改为 Google Sans Flex Bold "N" 字形（高 32，单色樱粉）
+
+推翻之前手工几何 N，按用户最新要求：
+  「n太大了，小一点，用Googlesans」
+
+字体来源：
+  C:\Users\20653\AppData\Local\Microsoft\Windows\Fonts\GoogleSansFlex-Regular.ttf
+  GoogleSansFlex 是可变字体，有 wght 1..1000 等轴
+  实例化 wght=700 (Bold) 后提取 "N" 字形轮廓，转成 SVG pathData
+
+缩放与变换：
+  字形 bbox (154, 0)..(1354, 1432) 字体单位 (unitsPerEm=2000)
+  目标高 32（用户说"太大了"，上一版手工 N 是 44，缩小 27%）
+  缩放 s = 32 / 1432 = 0.022346
+  Y 翻转 + 居中到 (54, 54)
+  包围盒 x 40.59..67.41（宽 26.82），y 38..70（高 32）
+
+为什么用 Bold 而不是 Regular：
+  Regular (400) 在 32 单位高度下竖干宽约 2.8 视口单位，
+  缩到 48dp 后约 1.2px，肉眼几乎看不见。
+  Bold (700) 竖干宽约 3.5 单位，缩到 48dp 约 1.5px，清晰可辨。
+
+字体版权：
+  GoogleSansFlex 是 Google 专有字体。
+  只提取单个字形轮廓转成 SVG pathData 嵌入 APK，
+  不重新分发 TTF 文件本身。
+  与把文字转成 outlines 嵌入 logo 是同一类用法。
+
+写自检脚本踩的坑（已修复，已记入记忆）：
+  TrueType glyf 用 Q 命令（二次贝塞尔）而不是 C
+  真字体 pathData 大量 H/V 命令，跳过会让轮廓错位
+  → 解析器加了 Q、H、V 分支支持
+
+真机（Xperia 1 V / Android 16 / Vector）：
+  挂钩 9 条无异常；patched 小红书/哔哩哔哩 2->1 共 3 条。
