@@ -40,6 +40,7 @@ object NotificationIconPatch {
             }
 
             val smallIcon = notification.smallIcon ?: return
+            val beforeType = smallIcon.type
 
             // 2) 已经适配过的单色图标不动
             if (options.preserveTinted) {
@@ -52,7 +53,7 @@ object NotificationIconPatch {
                 ModuleOptions.USE_LAUNCHER_ICON -> useLauncherIcon(pkg, notification, context)
                 ModuleOptions.FORCE_MONOCHROME -> forceMonochrome(smallIcon, notification, context)
             }
-            ModuleRuntime.logI("patched $pkg")
+            ModuleRuntime.logI("patched $pkg $beforeType->${notification.smallIcon?.type}")
         } catch (t: Throwable) {
             ModuleRuntime.logE("patch failed", t)
         }
