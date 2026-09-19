@@ -7,8 +7,27 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
+        android:description="@string/xposed_description"
         tools:targetApi="34">
 
+        <!--
+            android:description 是真正在 Vector 里显示出描述的字段。
+
+            从设备上两个「能显示描述」的模块反推出来的（aapt2 dump 对比）：
+              - Global Icon Pack（老 Xposed，minversion=93）
+                -> 有 xposeddescription meta-data，**没有** android:description
+              - Eta（LibXposed，API 102，跟我们同类）
+                -> 有 android:description=@string/xposed_description
+                   **完全没有** xposeddescription meta-data（grep -c 得 0）
+                   其 description 资源的中文值正是 Vector 界面上显示的文字
+
+            结论：**Vector 对 LibXposed（API >= 100）模块读 android:description
+            （ApplicationInfo.descriptionRes），对老 Xposed 才读 xposeddescription
+            meta-data。** 我们是 API 102，之前只有 meta-data，所以一直显示空。
+
+            这个属性是 Android 标准属性（API 1 起），值走资源引用没问题 ——
+            它是 PackageManager 解析的，不是 Bundle.getString()。
+        -->
         <meta-data
             android:name="xposedmodule"
             android:value="true" />
