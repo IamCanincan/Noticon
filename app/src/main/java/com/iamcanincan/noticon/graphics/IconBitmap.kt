@@ -8,10 +8,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
-import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
 import android.os.Build
@@ -27,7 +24,11 @@ import kotlin.math.abs
  */
 object IconBitmap {
 
-    private const val ICON_EDGE = 64
+    /**
+     * 通知图标位图的边长。高密度屏上状态栏图标要 90px 往上，
+     * 按这个尺寸出图，系统缩放时才不会糊成一团。
+     */
+    private const val ICON_EDGE = 96
 
     /** alpha 低于这个值就当透明，不算图形的一部分 —— 用来滤掉图标自带的半透明投影 */
     private const val MIN_SHAPE_ALPHA = 128
@@ -56,38 +57,50 @@ object IconBitmap {
         return if (drawable != null) rasterize(drawable) else Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
     }
 
-    /** 圆形裁切：radius 会被 Canvas 自动收敛到边长的一半，所以传边长即是正圆 */
-    fun rounded(source: Bitmap, radiusPx: Int): Bitmap {
-        val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(output)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
-        val rect = Rect(0, 0, source.width, source.height)
-        canvas.drawARGB(0, 0, 0, 0)
-        paint.color = Color.DKGRAY
-        canvas.drawRoundRect(RectF(rect), radiusPx.toFloat(), radiusPx.toFloat(), paint)
-        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
-        canvas.drawBitmap(source, rect, rect, paint)
-        return output
+    /**
+     * 裁掉四周的空白边，再把内容放大填满。
+     *
+     * 自适应图标光栅化之后，内容只落在画布中间约 61% 的区域（safe zone），
+     * 外面一圈是空的；直接拿去当通知图标，缩到状态栏那点尺寸就又小又糊，
+     * 根本认不出是哪个应用。这里先按非透明像素求出内容边界裁出来，
+     * 再等比放大填满目标尺寸。
+     */
+    fun fill(source: Bitmap, size: Int = ICON_EDGE): Bitmap {
+        val bounds = contentBounds(source) ?: return scaleTo(source, size)
+        val cropped = Bitmap.createBitmap(source, bounds.left, bounds.top, bounds.width(), bounds.height())
+        return scaleTo(cropped, size)
     }
 
-    /**
-     * 铺一层圆形底板再放上图标。
-     * 启动图标本身大多是不透明的正圆/方圆角，底板通常看不见；
-     * 它的作用是兜住那些带透明边缘的图标，免得直接飘在通知里。
-     */
-    fun onPlate(foreground: Bitmap, plateColor: Int, size: Int = ICON_EDGE): Bitmap {
-        val plate = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        plate.eraseColor(plateColor)
-        val output = rounded(plate, size)
-        val canvas = Canvas(output)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
-        val scaled = if (foreground.width == size && foreground.height == size) {
-            foreground
+    private fun scaleTo(source: Bitmap, size: Int): Bitmap {
+        return if (source.width == size && source.height == size) {
+            source
         } else {
-            Bitmap.createScaledBitmap(foreground, size, size, true)
+            Bitmap.createScaledBitmap(source, size, size, true)
         }
-        canvas.drawBitmap(scaled, 0f, 0f, paint)
-        return output
+    }
+
+    /** 非透明像素的外接矩形；整张都透明时返回 null */
+    private fun contentBounds(source: Bitmap): Rect? {
+        val w = source.width
+        val h = source.height
+        val pixels = IntArray(w * h)
+        source.getPixels(pixels, 0, w, 0, 0, w, h)
+        var minX = w
+        var minY = h
+        var maxX = -1
+        var maxY = -1
+        for (y in 0 until h) {
+            val row = y * w
+            for (x in 0 until w) {
+                if (Color.alpha(pixels[row + x]) >= MIN_SHAPE_ALPHA) {
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                }
+            }
+        }
+        return if (maxX < 0) null else Rect(minX, minY, maxX + 1, maxY + 1)
     }
 
     /**

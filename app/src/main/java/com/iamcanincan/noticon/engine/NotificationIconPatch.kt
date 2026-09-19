@@ -22,9 +22,6 @@ import com.iamcanincan.noticon.util.MemberLookup
  */
 object NotificationIconPatch {
 
-    /** 铺在启动图标下面的浅色底板；图标不透明时看不见，主要用于兜住透明边缘 */
-    private const val PLATE_COLOR = 0xFFE6F0FA.toInt()
-
     fun patch(sbn: StatusBarNotification, context: Context) {
         try {
             val notification = sbn.notification ?: return
@@ -80,11 +77,9 @@ object NotificationIconPatch {
         val packageManager = context.packageManager
         val appInfo = packageManager.getApplicationInfo(pkg, PackageManager.GET_META_DATA)
         val launcherDrawable = packageManager.getApplicationIcon(appInfo)
-        val launcherBitmap: Bitmap = IconBitmap.rasterize(launcherDrawable)
-        IconBitmap.applySmallIcon(
-            Icon.createWithBitmap(IconBitmap.onPlate(launcherBitmap, PLATE_COLOR)),
-            notification
-        )
+        // 自适应图标光栅化后四周空一圈，先裁掉再放大填满，否则通知里那个图标会很小
+        val launcherBitmap = IconBitmap.fill(IconBitmap.rasterize(launcherDrawable))
+        IconBitmap.applySmallIcon(Icon.createWithBitmap(launcherBitmap), notification)
         return true
     }
 
