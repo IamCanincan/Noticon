@@ -10,10 +10,17 @@
           `xposedminversion`、`xposedscope`）。只定义带下划线的那一个时，
           Vector 里会一直显示成「没有描述」。
 
-        后者直接引用前者，改文字只需要改一处。
+        两个都直接写完整字符串，**不要互相引用**：
+        aapt2 对 `<string>X</string>` 元素的值是 `@string/Y` 的情况有边界 bug，
+        会把字面字符串 "@string/Y" 存到 X 里（dump resources 能看到），
+        Vector 反射 getString(X) 拿到的是 "@string/Y" 而不是真实描述。
+        两个独立字符串就没这个问题，改文字需要改两处。
+
+        manifest meta-data 里 `xposeddescription` 写的是裸字符串字面量
+        （不是资源引用），所以 `Bundle.getString()` 能正确读到。
     -->
     <string name="xposed_description">把未适配主题的通知小图标换成应用自己的图标并保留原色，已适配（单色/灰度）的图标原样不动。纯后台运行，无桌面入口、无需配置，仅作用于 SystemUI。基于 LibXposed API 102。</string>
-    <string name="xposeddescription">@string/xposed_description</string>
+    <string name="xposeddescription">把未适配主题的通知小图标换成应用自己的图标并保留原色，已适配（单色/灰度）的图标原样不动。纯后台运行，无桌面入口、无需配置，仅作用于 SystemUI。基于 LibXposed API 102。</string>
 
     <string name="xposedminversion">102</string>
 </resources>
