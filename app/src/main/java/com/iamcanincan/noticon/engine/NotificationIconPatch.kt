@@ -50,6 +50,7 @@ object NotificationIconPatch {
             val replaced = when (options.replacement) {
                 ModuleOptions.USE_LAUNCHER_ICON -> useLauncherIcon(pkg, notification, context)
                 ModuleOptions.FORCE_MONOCHROME -> forceMonochrome(smallIcon, notification, context)
+                ModuleOptions.LAUNCHER_ICON_MONOCHROME -> launcherIconMonochrome(pkg, notification, context)
                 else -> false
             }
             // 只有真的换了才打日志；跳过的情况不打，免得日志里分不清「换了」和「没动」
@@ -80,6 +81,26 @@ object NotificationIconPatch {
         // 自适应图标光栅化后四周空一圈，先裁掉再放大填满，否则通知里那个图标会很小
         val launcherBitmap = IconBitmap.fill(IconBitmap.rasterize(launcherDrawable))
         IconBitmap.applySmallIcon(Icon.createWithBitmap(launcherBitmap), notification)
+        return true
+    }
+
+    /**
+     * 用桌面应用图标生成系统风格的通知图标。
+     *
+     * 轮廓取自用户认得的桌面图标，但交出去的是透明底 + 白色形状的单色剪影，
+     * 由系统按主题统一着色 —— 一眼认得出是哪个应用，又和那些本来就适配好
+     * 的图标长得一样，不会五颜六色地散在通知里。
+     *
+     * 注意顺序：先 fill 再 monochrome。fill 裁掉的透明边正好是 monochrome
+     * 判断形状的凭据，反过来做会把整块图标压成一个实心圆。
+     */
+    private fun launcherIconMonochrome(pkg: String, notification: Notification, context: Context): Boolean {
+        val packageManager = context.packageManager
+        val appInfo = packageManager.getApplicationInfo(pkg, PackageManager.GET_META_DATA)
+        val launcherDrawable = packageManager.getApplicationIcon(appInfo)
+        // 只取前景层，再裁掉四周空白放大填满，最后去掉颜色只留明暗
+        val filled = IconBitmap.fill(IconBitmap.foregroundOf(launcherDrawable))
+        IconBitmap.applySmallIcon(Icon.createWithBitmap(IconBitmap.grayscale(filled)), notification)
         return true
     }
 

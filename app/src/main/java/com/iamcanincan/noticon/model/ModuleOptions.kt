@@ -19,11 +19,11 @@ data class ModuleOptions(
     /**
      * 跳过系统的统一着色、保住图标原色。
      *
-     * 默认开：塞进去的是彩色应用图标，不保色的话系统会把它又染成单色，白换一场。
-     * 只有改用 FORCE_MONOCHROME（压成单色剪影）时才需要关掉 —— 那种形状本来
-     * 就该由系统按主题上色。
+     * 默认关：默认策略交出去的是单色剪影，本来就该由系统按主题上色
+     * （深色主题白、浅色主题深）。只有改用 USE_LAUNCHER_ICON（塞彩色启动图标）
+     * 时才需要打开，否则系统会把彩色图标又染回单色，白换一场。
      */
-    var keepOriginalColor: Boolean = true,
+    var keepOriginalColor: Boolean = false,
 
     /** 是否连代发通知（例如推送 SDK 代投、opPkg 与 pkg 不一致）一起处理 */
     var includeProxyNotifications: Boolean = false,
@@ -31,19 +31,23 @@ data class ModuleOptions(
     /**
      * 替换策略，取值见下面的常量。
      *
-     * 默认走「换成桌面上那个应用图标」：未适配的小图标本来就是一坨看不出
-     * 是谁的色块，直接用用户认得的应用图标替掉最直观。
+     * 默认走「用桌面图标生成单色剪影」：轮廓取自用户认得的桌面图标，
+     * 但交出去的是纯 alpha 的黑白剪影，由系统按主题统一着色 ——
+     * 既一眼认得出是哪个应用，又和那些本来就适配好的图标长得一样。
      */
-    var replacement: Int = USE_LAUNCHER_ICON,
+    var replacement: Int = LAUNCHER_ICON_MONOCHROME,
 
     /** 永不处理的应用包名 */
     var excludedPackages: Set<String> = emptySet()
 ) {
     companion object {
-        /** 未适配 → 换成应用启动图标 */
+        /** 未适配 → 直接换成彩色的应用启动图标 */
         const val USE_LAUNCHER_ICON = 0
 
-        /** 未适配 → 就地压成单色，模拟应用自己适配过 */
+        /** 未适配 → 把应用自己给的那个小图标就地压成单色 */
         const val FORCE_MONOCHROME = 1
+
+        /** 未适配 → 用桌面应用图标生成单色剪影（默认） */
+        const val LAUNCHER_ICON_MONOCHROME = 2
     }
 }

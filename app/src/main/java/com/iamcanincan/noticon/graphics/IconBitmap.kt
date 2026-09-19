@@ -9,6 +9,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
 import android.os.Build
@@ -77,6 +78,18 @@ object IconBitmap {
         } else {
             Bitmap.createScaledBitmap(source, size, size, true)
         }
+    }
+
+    /**
+     * 取桌面图标里真正代表图形的那一层。
+     *
+     * 自适应图标分成背景层和前景层：整张光栅化出来是一块不透明的彩色方块，
+     * 拿去压单色就只剩一个白方块，什么信息都不剩。只有前景层是「透明底 + 图形」，
+     * 用它的 alpha 才压得出有用的剪影。普通图标没有分层，直接用整张。
+     */
+    fun foregroundOf(drawable: Drawable, size: Int = ICON_EDGE): Bitmap {
+        val source = if (drawable is AdaptiveIconDrawable) drawable.foreground else drawable
+        return rasterize(source, size)
     }
 
     /** 非透明像素的外接矩形；整张都透明时返回 null */
@@ -148,6 +161,35 @@ object IconBitmap {
 
         val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         result.setPixels(outputPixels, 0, w, 0, 0, w, h)
+        return result
+    }
+
+    /**
+     * 去掉颜色、只留明暗。
+     *
+     * 灰度图三通道相等，正好命中系统「这个图标做过主题适配」的判据
+     * （ToneCheck 用的是同一套标准），于是系统会按主题给它上色 ——
+     * 深色主题下白、浅色主题下深，和原生适配过的图标一模一样。
+     *
+     * 为什么不压成纯 alpha 剪影：桌面图标是一整块不透明的彩色图形，
+     * 二值化只会得到它的外轮廓（圆形图标就压成一个白圆），细节全丢。
+     * 灰度化保留了明暗层次，缩到状态栏那点尺寸也认得出是哪个应用。
+     */
+    fun grayscale(input: Bitmap): Bitmap {
+        val w = input.width
+        val h = input.height
+        val pixels = IntArray(w * h)
+        val output = IntArray(w * h)
+        input.getPixels(pixels, 0, w, 0, 0, w, h)
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            val alpha = Color.alpha(pixel)
+            if (alpha < MIN_SHAPE_ALPHA) continue
+            val gray = (Color.red(pixel) * 299 + Color.green(pixel) * 587 + Color.blue(pixel) * 114) / 1000
+            output[i] = Color.argb(alpha, gray, gray, gray)
+        }
+        val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        result.setPixels(output, 0, w, 0, 0, w, h)
         return result
     }
 
