@@ -43,7 +43,7 @@
         -->
         <meta-data
             android:name="xposeddescription"
-            android:value="把未适配主题的通知小图标换成应用自己的图标，并保留原本的彩色；已经适配（单色/灰度）的图标原样不动。纯后台运行，无桌面入口、无需配置，只作用于系统界面（SystemUI）。" />
+            android:value="把未适配的通知小图标换成应用图标，保留原色；已适配的不动" />
         <meta-data
             android:name="xposedminversion"
             android:value="102" />

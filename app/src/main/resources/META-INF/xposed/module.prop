@@ -2,7 +2,8 @@ id=com.iamcanincan.noticon
 name=Noticon
 version=1.0
 versionCode=1
-description=Replace notification small icons that lack theming support with the app's own launcher icon and keep the original colors. Icons that are already monochrome are left untouched. Runs in the background with no launcher entry and no configuration, scoped to SystemUI only. The Chinese description shown in the manager comes from the xposeddescription resource.
+description=Replaces unthemed notification small icons with the app's own launcher icon, keeping the original colors. Already monochrome icons are left untouched. No launcher entry, no configuration, SystemUI only.
+# Note: the Chinese description shown in the manager comes from android:description (see AndroidManifest.xml), not from this file.
 author=IamCanincan
 minApiVersion=102
 targetApiVersion=102

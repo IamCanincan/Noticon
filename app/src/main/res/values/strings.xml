@@ -19,8 +19,8 @@
         manifest meta-data 里 `xposeddescription` 写的是裸字符串字面量
         （不是资源引用），所以 `Bundle.getString()` 能正确读到。
     -->
-    <string name="xposed_description">把未适配主题的通知小图标换成应用自己的图标并保留原色，已适配（单色/灰度）的图标原样不动。纯后台运行，无桌面入口、无需配置，仅作用于 SystemUI。基于 LibXposed API 102。</string>
-    <string name="xposeddescription">把未适配主题的通知小图标换成应用自己的图标并保留原色，已适配（单色/灰度）的图标原样不动。纯后台运行，无桌面入口、无需配置，仅作用于 SystemUI。基于 LibXposed API 102。</string>
+    <string name="xposed_description">把未适配的通知小图标换成应用图标，保留原色；已适配的不动</string>
+    <string name="xposeddescription">把未适配的通知小图标换成应用图标，保留原色；已适配的不动</string>
 
     <string name="xposedminversion">102</string>
 </resources>
