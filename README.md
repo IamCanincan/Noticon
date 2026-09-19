@@ -35,7 +35,7 @@ adb logcat -s Noticon -d | grep patched
 
 ## 安装
 
-1. 安装 `Noticon-v1.0-release.apk`（或用 `./gradlew assembleDebug` 自行构建）。
+1. 安装 `Noticon-v1.0.2-release.apk`（或用 `./gradlew assembleDebug` 自行构建）。
 2. 在 **LSPosed / Vector**（或其他支持 LibXposed API 102 的框架）中启用 Noticon。
 3. **不用勾作用域**：模块通过 `staticScope=true` + `META-INF/xposed/scope.list` 把
    作用域写死成 `com.android.systemui`，管理器里只会列出系统界面这一项，也不会让你勾到别的应用。
@@ -52,7 +52,7 @@ adb logcat -s Noticon -d | grep patched
 手动做的话：
 
 ```bash
-adb install -r Noticon-v1.0-release.apk
+adb install -r Noticon-v1.0.2-release.apk
 # 在框架里启用 Noticon（作用域已固定为系统界面，不用勾）
 adb logcat -c
 adb shell am force-stop com.android.systemui   # 或 adb reboot

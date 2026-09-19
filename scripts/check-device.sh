@@ -8,7 +8,7 @@
 
 set -uo pipefail
 
-APK="Noticon-v1.0-release.apk"
+APK="Noticon-v1.0.2-release.apk"
 OUT="noticon.log"
 
 # adb server port. The default 5037 falls inside the Windows excluded port range

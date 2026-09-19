@@ -1,0 +1,14 @@
+- Now a pure LibXposed API 102 module: dropped all legacy Xposed meta-data
+  (xposedmodule / xposeddescription / xposedminversion / xposedscope).
+  Module name comes from android:label, description from android:description,
+  scope from META-INF/xposed/scope.list, config from module.prop.
+- Scope is fixed via staticScope=true: managers only list SystemUI
+  (com.android.systemui) and do not offer applying the module elsewhere.
+- Shorter module description (26 Chinese characters) so it fits the list.
+- Fixed: hooks were installed several times over, because the framework calls
+  onPackageReady 2-3 times for the same process. Now deduplicated by hook id.
+- Fixed: a failed reflective write of Notification.mSmallIcon no longer logs a
+  false "patched" success line.
+- scripts/check-device.sh: configurable adb port (default 5039 - port 5037 is
+  unusable on some Windows setups) and restarts SystemUI with `am force-stop`
+  instead of `kill` (which is rejected with "Operation not permitted").
