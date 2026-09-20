@@ -1,0 +1,16 @@
+<!--
+    「处理代发通知」的图标：纸飞机 / 转发箭头。
+
+    这是经典的 send 形状：从右下角出发到右端尖点，再回到左上角，
+    中间切出一个凹口形成箭头感。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M2.5,20.5 L21.5,12 L2.5,3.5 L2.5,10 L16,12 L2.5,14 Z" />
+</vector>

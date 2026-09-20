@@ -1,0 +1,36 @@
+<!--
+    「检查更新」的图标：向下箭头 + 托盘（下载 / 取回新版本）。
+
+    三段分开画：竖线、箭头尖（人字形）、底部托盘（U 形）。
+    箭头尖落在 y=14，正好接住从 y=3 下来的竖线。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 竖线 -->
+    <path
+        android:pathData="M12,3 L12,13.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.9" />
+
+    <!-- 箭头尖 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M7.4,9.4 L12,14 L16.6,9.4"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.9" />
+
+    <!-- 托盘 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M4,16.5 V19 A2,2 0 0,0 6,21 H18 A2,2 0 0,0 20,19 V16.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.9" />
+</vector>

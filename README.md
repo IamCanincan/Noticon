@@ -27,6 +27,8 @@ Android 12 起系统会强行把通知小图标统一着色，没做单色适配
 - **彩色模式保留原色**：替换后的图标按 App 原色显示，不会被再次统一着色。
 - **尺寸填满**：自适应图标光栅化后内容只占画布中间约 61%，四周是空的。模块会先裁掉空白再放大填满，否则缩到通知里那点尺寸会又小又糊。
 - **界面是 Material 3 Expressive**：Compose + Material3，Android 12 以上跟随系统动态取色。
+  界面图标全是手写的 vector drawable（`res/drawable/ic_*.xml`），没有引入图标库；
+  配色只用 `colorScheme` 的语义角色，不写死颜色，浅色 / 深色两套主题都已实机核对。
 - 仅注入 `com.android.systemui`，不碰其他进程。
 - 联网只用于设置界面里的「检查更新」：点按钮才去读一次最新 Release，比对版本号。
   直连 `api.github.com` 失败时（国内网络常见 DNS 屏蔽）会退到公共加速镜像 `gh-proxy.com`。
@@ -158,10 +160,15 @@ com.iamcanincan.noticon
 ├── ui/MainActivity                设置界面入口（同时是桌面图标）
 ├── ui/SettingsScreen              设置界面
 ├── ui/theme/Theme                 主题（动态取色 + MD3E）
+├── update/UpdateChecker           检查更新（唯一的联网点）
 ├── graphics/IconBitmap            位图的取、裁、合成
 ├── graphics/ToneCheck             单色（已适配）判定
 └── util/MemberLookup              反射取成员的薄封装
 ```
+
+界面图标（`res/drawable/ic_*.xml`）都是手写的 vector drawable，没有引图标库：
+`ic_mode_color` 调色盘 / `ic_mode_mono` 对比度 / `ic_power` 电源 / `ic_relay` 转发 /
+`ic_update` 下载 / `ic_scope` 盾牌。都是黑色描边或填充，实际颜色由 `Icon(tint=…)` 决定。
 
 界面只让用户选「模式」，其余选项由模式推导，不需要额外配置渠道。底层 `replacement` 仍保留三种取值：
 
