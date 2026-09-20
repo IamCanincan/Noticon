@@ -5,7 +5,7 @@ package com.iamcanincan.noticon.model
  *
  * 默认值 = 没有配置时的兜底行为（等价于「彩色桌面图标」模式）。
  * 界面里改了设置后，值由 [com.iamcanincan.noticon.data.ModulePrefs] 从
- * SharedPreferences 读出来覆盖 —— 模块侧走 LibXposed 的远程配置通道。
+ * SharedPreferences 读出来覆盖 —— 模块侧通过本应用暴露的只读 ContentProvider 跨进程取。
  *
  * 注意 [keepOriginalColor] 与 [replacement] 必须成对：彩色图标要保色，
  * 单色剪影要交给系统上色。界面只让用户选「模式」，这一对由模式推导。
