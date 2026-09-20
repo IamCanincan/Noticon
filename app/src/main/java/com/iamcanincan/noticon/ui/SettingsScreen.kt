@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -97,23 +98,25 @@ fun SettingsScreen() {
 
             SectionLabel("图标模式")
             ModeOption(
-                icon = R.drawable.ic_mode_color,
-                title = "彩色桌面图标",
-                description = "把还没做主题适配的彩色小图标，换成应用在桌面上那个图标，颜色原样保留。",
-                selected = mode == ModulePrefs.MODE_LAUNCHER_ICON,
-                onClick = {
-                    mode = ModulePrefs.MODE_LAUNCHER_ICON
-                    prefs.edit().putInt(ModulePrefs.KEY_MODE, ModulePrefs.MODE_LAUNCHER_ICON).apply()
-                }
-            )
-            ModeOption(
                 icon = R.drawable.ic_mode_mono,
                 title = "系统黑白通知",
                 description = "把应用自己给的小图标压成单色剪影，由系统按主题统一上色，风格和其它通知一致。",
+                previewColorful = false,
                 selected = mode == ModulePrefs.MODE_MONOCHROME,
                 onClick = {
                     mode = ModulePrefs.MODE_MONOCHROME
                     prefs.edit().putInt(ModulePrefs.KEY_MODE, ModulePrefs.MODE_MONOCHROME).apply()
+                }
+            )
+            ModeOption(
+                icon = R.drawable.ic_mode_color,
+                title = "彩色桌面图标",
+                description = "把还没做主题适配的彩色小图标，换成应用在桌面上那个图标，颜色原样保留。",
+                previewColorful = true,
+                selected = mode == ModulePrefs.MODE_LAUNCHER_ICON,
+                onClick = {
+                    mode = ModulePrefs.MODE_LAUNCHER_ICON
+                    prefs.edit().putInt(ModulePrefs.KEY_MODE, ModulePrefs.MODE_LAUNCHER_ICON).apply()
                 }
             )
 
@@ -299,6 +302,8 @@ private fun ModeOption(
     @DrawableRes icon: Int,
     title: String,
     description: String,
+    /** 效果预览里「处理后」是彩色（true）还是单色（false） */
+    previewColorful: Boolean,
     selected: Boolean,
     onClick: () -> Unit
 ) {
@@ -336,10 +341,62 @@ private fun ModeOption(
                     color = if (selected) scheme.onSecondaryContainer.copy(alpha = 0.78f)
                     else scheme.onSurfaceVariant
                 )
+                Spacer(Modifier.height(8.dp))
+                EffectPreview(colorful = previewColorful, selected = selected)
             }
             Spacer(Modifier.width(12.dp))
             RadioDot(selected = selected)
         }
+    }
+}
+
+/**
+ * 「处理前 → 处理后」的小示意。一眼能看到「把灰白小图标换成什么」。
+ *
+ * 处理前用一个灰色方块代表「未适配主题的原始小图标」（通知栏里看到的就是
+ * 这种灰白一片）。处理后根据模式显示彩色圆（保色模式）或单色圆（系统上色）。
+ */
+@Composable
+private fun EffectPreview(colorful: Boolean, selected: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // 处理前：灰白方块（模拟 Android 12+ 强上色后的"看不出是谁"状态）
+        Box(
+            Modifier
+                .size(15.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(scheme.outlineVariant)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "→",
+            style = MaterialTheme.typography.labelMedium,
+            color = scheme.outline
+        )
+        Spacer(Modifier.width(8.dp))
+        // 处理后
+        Box(
+            Modifier
+                .size(15.dp)
+                .clip(CircleShape)
+                .let {
+                    if (colorful) it.background(
+                        Brush.sweepGradient(
+                            listOf(
+                                Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF3F51B5),
+                                Color(0xFF03A9F4), Color(0xFF009688), Color(0xFFE91E63)
+                            )
+                        )
+                    )
+                    else it.background(if (selected) scheme.primary else scheme.outline)
+                }
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            if (colorful) "保留原色" else "按主题统一上色",
+            style = MaterialTheme.typography.labelSmall,
+            color = scheme.onSurfaceVariant
+        )
     }
 }
 
