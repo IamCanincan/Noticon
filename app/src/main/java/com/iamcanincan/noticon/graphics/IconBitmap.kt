@@ -157,7 +157,10 @@ object IconBitmap {
      * 不能是带颜色的位图，否则染出来就不对了。
      *
      * 形状优先取自 alpha 通道：绝大多数图标是透明底 + 图形，alpha 本身就是轮廓。
-     * 整张都不透明时（自适应图标光栅化后常见）退化成「与四边底板色差异大的算图形」。
+     * 整张都不透明时（自适应图标光栅化后常见）退化成亮度二值化，
+     * 再按连通性区分「连到图标外部的背景」与「被包在里面的图形」。
+     * 只有透明像素占多数时才走 alpha —— 透明像素少而图形大时，
+     * alpha 描述的是整块底板的轮廓，照搬会压出一个白方块。详见 [binarize]。
      *
      * 压不出像样的形状时返回 null，由上层保持原样 —— 详见 [MIN_SHAPE_RATIO]。
      */
@@ -280,26 +283,76 @@ object IconBitmap {
      * 大 logo 顶到边、只有四角露出底色时，少数派反而是**背景**，
      * 于是压出来是个「框 + 中间一个洞」，和原图正好相反。
      *
-     * 改成看**连通性**：背景通常与画布四边相连，图形是被背景包住的内部块。
-     * 两类各做一次「从边界出发的同类连通填充」，与边界相连的比例低的那个才是形状。
+     * 改成看**连通性**：背景通常与图标外部相连，图形是被背景包住的内部块。
+     * 两类各做一次「从外部出发的同类连通填充」，与外部相连的比例低的那个才是形状。
      * 两类打平（上下对半分、图形本身也顶到边之类）时退回「取较少一侧」，
      * 保证至少不会比以前更差。
      */
     private fun keepDarkSide(classes: IntArray, w: Int, h: Int, dark: Int, light: Int): Boolean {
-        val darkBorder = borderConnectedRatio(classes, w, h, CLASS_DARK, dark)
-        val lightBorder = borderConnectedRatio(classes, w, h, CLASS_LIGHT, light)
+        val outside = outsideMask(classes, w, h)
+        val darkBorder = borderConnectedRatio(classes, outside, w, h, CLASS_DARK, dark)
+        val lightBorder = borderConnectedRatio(classes, outside, w, h, CLASS_LIGHT, light)
         if (darkBorder == lightBorder) return dark <= light
         return darkBorder < lightBorder
     }
 
     /**
-     * 某一类里，与画布四边相连的像素占该类的比例。
+     * 标出「图标外部」：与画布四边相连的透明区域。
+     *
+     * 不能只看画布四边。图标自带一圈透明边时（不到 5%，仍会走二值化），
+     * 前景和背景都缩在画布内部，两类都判成「不与边界相连」，比例双双为 0，
+     * 判定就退化成「取较少一侧」—— 在「大图形 + 透明边」的组合下又压反了。
+     * 把外部定义成透明区域向内的延伸，那圈透明边就重新成为可用的边界。
+     *
+     * 只认「与画布四边连通」的透明区域：图形内部的透明洞不算外部，
+     * 否则图形自己会被当成边界，判定同样失效。
+     */
+    private fun outsideMask(classes: IntArray, w: Int, h: Int): BooleanArray {
+        val total = w * h
+        val outside = outsideBuffer(total)
+        outside.fill(false)
+        val stack = stackBuffer(total)
+        var top = 0
+
+        fun seed(i: Int) {
+            if (classes[i] == CLASS_TRANSPARENT && !outside[i]) {
+                outside[i] = true
+                stack[top++] = i
+            }
+        }
+
+        for (x in 0 until w) {
+            seed(x)
+            seed((h - 1) * w + x)
+        }
+        for (y in 0 until h) {
+            seed(y * w)
+            seed(y * w + w - 1)
+        }
+
+        while (top > 0) {
+            val i = stack[--top]
+            val x = i % w
+            val y = i / w
+            if (x > 0) seed(i - 1)
+            if (x < w - 1) seed(i + 1)
+            if (y > 0) seed(i - w)
+            if (y < h - 1) seed(i + w)
+        }
+        return outside
+    }
+
+    /**
+     * 某一类里，贴着图标外部的像素占该类的比例。
+     *
+     * 边界有两处：画布四边（整张不透明时唯一可用），以及紧邻 [outside] 的那一圈
+     * （图标自带透明边时可用）。两处一起当种子，两类都够不到任何一处才会打平。
      *
      * 用显式栈做四邻域洪泛，不递归 —— 整张图标可能连成一片，递归会爆栈。
      * 缓冲区复用，这段代码在通知刷新的路径上。
      */
     private fun borderConnectedRatio(
-        classes: IntArray, w: Int, h: Int, kind: Int, kindTotal: Int
+        classes: IntArray, outside: BooleanArray, w: Int, h: Int, kind: Int, kindTotal: Int
     ): Float {
         if (kindTotal == 0) return 0f
         val total = w * h
@@ -322,6 +375,18 @@ object IconBitmap {
         for (y in 0 until h) {
             seed(y * w)
             seed(y * w + w - 1)
+        }
+        for (i in 0 until total) {
+            if (classes[i] != kind || visited[i]) continue
+            val x = i % w
+            val y = i / w
+            if ((x > 0 && outside[i - 1]) ||
+                (x < w - 1 && outside[i + 1]) ||
+                (y > 0 && outside[i - w]) ||
+                (y < h - 1 && outside[i + w])
+            ) {
+                seed(i)
+            }
         }
 
         var connected = 0
@@ -365,9 +430,20 @@ object IconBitmap {
         return buf
     }
 
+    /** 外部掩码必须与 [visitedBuffer] 分开缓存 —— 洪泛期间两者同时在用，共用会互相清掉 */
+    private fun outsideBuffer(size: Int): BooleanArray {
+        var buf = outsideBufferCache
+        if (buf == null || buf.size < size) {
+            buf = BooleanArray(size)
+            outsideBufferCache = buf
+        }
+        return buf
+    }
+
     private var classBufferCache: IntArray? = null
     private var visitedBufferCache: BooleanArray? = null
     private var stackBufferCache: IntArray? = null
+    private var outsideBufferCache: BooleanArray? = null
 
     private fun luma(pixel: Int): Int {
         return (Color.red(pixel) * 299 + Color.green(pixel) * 587 + Color.blue(pixel) * 114) / 1000
