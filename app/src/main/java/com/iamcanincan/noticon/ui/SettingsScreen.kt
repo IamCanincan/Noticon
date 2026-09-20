@@ -99,7 +99,7 @@ fun SettingsScreen() {
             ModeOption(
                 icon = R.drawable.ic_mode_color,
                 title = "彩色桌面图标",
-                description = "把通知里认不出的灰白小图标，换成应用在桌面上那个图标，颜色原样保留。",
+                description = "把还没做主题适配的彩色小图标，换成应用在桌面上那个图标，颜色原样保留。",
                 selected = mode == ModulePrefs.MODE_LAUNCHER_ICON,
                 onClick = {
                     mode = ModulePrefs.MODE_LAUNCHER_ICON
@@ -393,8 +393,9 @@ private fun ScopeCard() {
                 Spacer(Modifier.height(5.dp))
                 Text(
                     "模块只作用于「系统界面」，作用域由模块自己固定，不需要手动勾选。"
-                        + "如果发现模块不生效，先在框架的模块详情里确认模块已启用、"
-                        + "作用域里有「系统界面」，然后重启设备。",
+                        + "如果发现模块不生效，到框架的模块详情页点一次「应用」"
+                        + "（右上角开关 → 底部「应用」），然后重启设备 —— "
+                        + "重装过模块的话，这一步要重新做一次。",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
