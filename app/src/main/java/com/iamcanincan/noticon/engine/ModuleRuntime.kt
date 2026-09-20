@@ -286,6 +286,17 @@ object ModuleRuntime {
             logW("getRemotePreferences returned null")
             return null
         }
+        // ⚠ Vector 的 getRemotePreferences 返回的是「空但非 null」的实例（实证）。
+        // 空实例经 ModulePrefs.read 会得到一份**默认值**，看起来跟真配置一模一样 ——
+        // 于是 provider 还没回应时，模块会拿默认值当用户设置用，把真实设置顶掉。
+        // 只认「里面真有 mode 键」的对象，和 readFromRemoteFile 用同一把尺子。
+        val hasMode = runCatching { prefs.contains(ModulePrefs.KEY_MODE) }
+            .onFailure { logW("remote preferences unreadable: ${it::class.java.simpleName}: ${it.message}") }
+            .getOrDefault(false)
+        if (!hasMode) {
+            logW("getRemotePreferences has no '${ModulePrefs.KEY_MODE}', treating as unavailable")
+            return null
+        }
         return runCatching { ModulePrefs.read(prefs) }
             .onFailure { logW("remote preferences unreadable: ${it.message}") }
             .getOrNull()

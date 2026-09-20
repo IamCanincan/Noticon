@@ -49,6 +49,19 @@ object SystemUiHooks {
      */
     private val installedHookIds = HashSet<String>()
 
+    /**
+     * 主挂钩（inflateViews）是否已就位。
+     *
+     * 给调用方判断「还要不要再重试」用。框架会对同一个进程多次派发 packageReady，
+     * 而后几次带来的 ClassLoader 可能根本用不了（实测第三次派发 5 个目标类全 missing）——
+     * 那时若还照着重试，就是为一个永远好不了的 ClassLoader 空转 5 秒。
+     * 挂钩一旦装上就跟 ClassLoader 无关了，装过即收工。
+     */
+    @Volatile
+    private var rowInflationInstalled = false
+
+    fun isInstalled(): Boolean = rowInflationInstalled
+
     /** 挂载时会逐个探测这些类是否存在，缺的会打进日志 */
     private val TARGET_CLASSES = listOf(
         ROW_BINDER_MODERN, ROW_BINDER_LEGACY, NOTIFICATION_ENTRY,
@@ -215,12 +228,14 @@ object SystemUiHooks {
             ModuleRuntime.logW("ContrastColorUtil not found, updateIconColor skipped")
             return
         }
-        if (!installedHookIds.add("updateIconColor")) return
+        // 先找方法、再登记 id。反过来的话，方法没找到也把 id 占了，
+        // 后面几轮重试会直接 return，那行诊断日志就永远打不出来
         val method = MemberLookup.methodWithParams(iconView, "updateIconColor")
         if (method == null) {
             logCandidates(iconView, "updateIconColor")
             return
         }
+        if (!installedHookIds.add("updateIconColor")) return
         module.hook(method).setId("updateIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
             if (shouldKeepColor()) {
                 runCatching {
