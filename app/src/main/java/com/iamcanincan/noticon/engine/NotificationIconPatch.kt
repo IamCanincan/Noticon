@@ -10,15 +10,13 @@ import android.service.notification.StatusBarNotification
 import com.iamcanincan.noticon.graphics.IconBitmap
 import com.iamcanincan.noticon.graphics.ToneCheck
 import com.iamcanincan.noticon.model.ModuleOptions
-import com.iamcanincan.noticon.util.MemberLookup
 
 /**
  * 通知小图标的修复主体。
  *
  * 判定顺序：
- * 1. 命中排除名单且不是代发通知 → 跳过；
- * 2. 图标已经是单色（说明应用做过主题适配）→ 跳过；
- * 3. 其余按 replacement 策略处理：换成启动图标，或就地压成单色。
+ * 1. 图标已经是单色（说明应用做过主题适配）→ 跳过；
+ * 2. 其余按 replacement 策略处理：换成启动图标，或就地压成单色。
  */
 object NotificationIconPatch {
 
@@ -30,14 +28,6 @@ object NotificationIconPatch {
             // 所以界面里切换模式后，新通知立刻按新模式处理，不需要重启
             val options = ModuleRuntime.options()
             if (!options.enabled) return
-
-            // 1) 排除名单。代发通知（opPkg 与 pkg 不一致）按开关单独决定要不要放行
-            if (pkg in options.excludedPackages) {
-                // getOpPkg 直到 API 29 才公开，直接调用在 Android 8/9 上会 NoSuchMethodError
-                val opPkg = MemberLookup.invoke(sbn, "getOpPkg") as? String
-                val isProxy = opPkg != null && opPkg != pkg
-                if (!isProxy || !options.includeProxyNotifications) return
-            }
 
             val smallIcon = notification.smallIcon ?: return
             val beforeType = iconType(smallIcon)

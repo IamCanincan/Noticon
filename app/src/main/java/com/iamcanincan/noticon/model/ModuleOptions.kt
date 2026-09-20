@@ -29,9 +29,6 @@ data class ModuleOptions(
      */
     var keepOriginalColor: Boolean = true,
 
-    /** 是否连代发通知（例如推送 SDK 代投、opPkg 与 pkg 不一致）一起处理 */
-    var includeProxyNotifications: Boolean = false,
-
     /**
      * 替换策略，取值见下面的常量。
      *
@@ -39,10 +36,7 @@ data class ModuleOptions(
      * 是谁的色块，用用户天天在桌面上见到、认得的那个图标替掉最直观。
      * 彩色原样保留（配合 [keepOriginalColor]），不做任何去色处理。
      */
-    var replacement: Int = USE_LAUNCHER_ICON,
-
-    /** 永不处理的应用包名 */
-    var excludedPackages: Set<String> = emptySet()
+    var replacement: Int = USE_LAUNCHER_ICON
 ) {
 
     /** 替换策略的可读名字，只用于日志 */
@@ -62,7 +56,7 @@ data class ModuleOptions(
      */
     fun describe(): String =
         "enabled=$enabled mode=$replacementName keepColor=$keepOriginalColor" +
-            " preserveTinted=$preserveTinted includeProxy=$includeProxyNotifications"
+            " preserveTinted=$preserveTinted"
 
     companion object {
         /** 未适配 → 直接换成彩色的应用启动图标 */

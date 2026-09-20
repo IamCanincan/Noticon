@@ -41,8 +41,7 @@ class ConfigProvider : ContentProvider() {
         cursor.addRow(
             arrayOf<Any>(
                 prefs.getInt(ModulePrefs.KEY_MODE, ModulePrefs.MODE_LAUNCHER_ICON),
-                if (prefs.getBoolean(ModulePrefs.KEY_ENABLED, true)) 1 else 0,
-                if (prefs.getBoolean(ModulePrefs.KEY_INCLUDE_PROXY, false)) 1 else 0
+                if (prefs.getBoolean(ModulePrefs.KEY_ENABLED, true)) 1 else 0
             )
         )
         return cursor
@@ -83,8 +82,7 @@ class ConfigProvider : ContentProvider() {
         /** 列名与 [ModulePrefs.COLUMN_*] 一一对应 */
         val COLUMNS = arrayOf(
             ModulePrefs.COLUMN_MODE,
-            ModulePrefs.COLUMN_ENABLED,
-            ModulePrefs.COLUMN_INCLUDE_PROXY
+            ModulePrefs.COLUMN_ENABLED
         )
     }
 }

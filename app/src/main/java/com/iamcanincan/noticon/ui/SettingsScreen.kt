@@ -63,10 +63,9 @@ import kotlinx.coroutines.withContext
  * 视觉约定（改样式时照着来，别再各写各的）：
  * - 卡片统一 24dp 圆角 + 1dp outlineVariant 描边，背景 surface；只有「已选中」
  *   和「状态条」这类需要突出的才用 container 色。
- * - 每个区块的标题走 [SectionLabel]；每条可选项左侧都有 44dp 的图标底板，
- *   所以开关组的分隔线要缩进到图标右边（[IconBadge] 宽度 + 间距）。
- * - 只暴露一个真正的选择 —— 图标模式；其余开关都是从它推导或独立的布尔项。
- *   每次改动立即落盘，模块侧下次被挂钩时就能读到，不需要点"保存"。
+ * - 每个区块的标题走 [SectionLabel]；每条可选项左侧都有 44dp 的图标底板。
+ * - 只暴露一个真正的选择 —— 图标模式；另有一个总开关。每次改动立即落盘，
+ *   模块侧下次被挂钩时就能读到，不需要点"保存"。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,9 +76,6 @@ fun SettingsScreen() {
     var enabled by remember { mutableStateOf(prefs.getBoolean(ModulePrefs.KEY_ENABLED, true)) }
     var mode by remember {
         mutableIntStateOf(prefs.getInt(ModulePrefs.KEY_MODE, ModulePrefs.MODE_LAUNCHER_ICON))
-    }
-    var includeProxy by remember {
-        mutableStateOf(prefs.getBoolean(ModulePrefs.KEY_INCLUDE_PROXY, false))
     }
 
     val version = remember { installedVersion(context) }
@@ -128,29 +124,16 @@ fun SettingsScreen() {
                 color = MaterialTheme.colorScheme.surface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Column {
-                    SwitchRow(
-                        icon = R.drawable.ic_power,
-                        title = "启用模块",
-                        description = "关闭后所有通知都不处理",
-                        checked = enabled,
-                        onCheckedChange = {
-                            enabled = it
-                            prefs.edit().putBoolean(ModulePrefs.KEY_ENABLED, it).apply()
-                        }
-                    )
-                    GroupDivider()
-                    SwitchRow(
-                        icon = R.drawable.ic_relay,
-                        title = "处理代发通知",
-                        description = "推送 SDK 代投的通知，实际发件应用与通知包名不一致",
-                        checked = includeProxy,
-                        onCheckedChange = {
-                            includeProxy = it
-                            prefs.edit().putBoolean(ModulePrefs.KEY_INCLUDE_PROXY, it).apply()
-                        }
-                    )
-                }
+                SwitchRow(
+                    icon = R.drawable.ic_power,
+                    title = "启用模块",
+                    description = "关闭后所有通知都不处理",
+                    checked = enabled,
+                    onCheckedChange = {
+                        enabled = it
+                        prefs.edit().putBoolean(ModulePrefs.KEY_ENABLED, it).apply()
+                    }
+                )
             }
 
             SectionLabel("更新")
@@ -355,15 +338,6 @@ private fun RadioDot(selected: Boolean) {
             Box(Modifier.size(15.dp).clip(CircleShape).background(scheme.surface))
         }
     }
-}
-
-/** 开关组内部的分隔线：左边缩进到图标右侧，不要顶到卡片边缘 */
-@Composable
-private fun GroupDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 14.dp + IconBadgeSize + 14.dp),
-        color = MaterialTheme.colorScheme.outlineVariant
-    )
 }
 
 @Composable

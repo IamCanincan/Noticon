@@ -42,7 +42,7 @@ If you see `patched <pkg> 2->1 via=monochrome`, the module swapped a resource-ty
 The startup line shows which settings were read:
 
 ```
-options: enabled=true mode=monochrome keepColor=false preserveTinted=true includeProxy=false (source=provider)
+options: enabled=true mode=monochrome keepColor=false preserveTinted=true (source=provider)
 ```
 
 `mode=launcher-icon` is the colored launcher icon, `mode=monochrome` is system monochrome.

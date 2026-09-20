@@ -172,8 +172,7 @@ object ModuleRuntime {
                 if (!cursor.moveToFirst()) return@use null
                 ModulePrefs.fromRaw(
                     mode = cursor.getInt(cursor.getColumnIndexOrThrow(ModulePrefs.COLUMN_MODE)),
-                    enabled = cursor.getInt(cursor.getColumnIndexOrThrow(ModulePrefs.COLUMN_ENABLED)) != 0,
-                    includeProxy = cursor.getInt(cursor.getColumnIndexOrThrow(ModulePrefs.COLUMN_INCLUDE_PROXY)) != 0
+                    enabled = cursor.getInt(cursor.getColumnIndexOrThrow(ModulePrefs.COLUMN_ENABLED)) != 0
                 )
             }
         }.onFailure {

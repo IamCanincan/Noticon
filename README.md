@@ -46,7 +46,7 @@ adb logcat -s Noticon -d | grep patched
 启动时还会打一行配置，确认界面里的设置被读到了：
 
 ```
-options: enabled=true mode=monochrome keepColor=false preserveTinted=true includeProxy=false (source=provider)
+options: enabled=true mode=monochrome keepColor=false preserveTinted=true (source=provider)
 ```
 
 `mode=launcher-icon` 是彩色桌面图标，`mode=monochrome` 是系统黑白。`source=` 表示这行配置是从哪条通道读到的：
@@ -167,10 +167,10 @@ com.iamcanincan.noticon
 ```
 
 界面图标（`res/drawable/ic_*.xml`）都是手写的 vector drawable，没有引图标库：
-`ic_mode_color` 调色盘 / `ic_mode_mono` 对比度 / `ic_power` 电源 / `ic_relay` 转发 /
+`ic_mode_color` 调色盘 / `ic_mode_mono` 对比度 / `ic_power` 电源 /
 `ic_update` 下载 / `ic_scope` 盾牌。都是黑色描边或填充，实际颜色由 `Icon(tint=…)` 决定。
 
-界面只让用户选「模式」，其余选项由模式推导，不需要额外配置渠道。底层 `replacement` 仍保留三种取值：
+界面只让用户选「模式」外加一个总开关，其余选项由模式推导，不需要额外配置渠道。底层 `replacement` 仍保留三种取值：
 
 | 值 | 常量 | 行为 |
 |---|---|---|

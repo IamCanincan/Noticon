@@ -35,11 +35,9 @@ object ModulePrefs {
     /** provider 返回的列名，模块侧按这些名字取值 */
     const val COLUMN_MODE = "mode"
     const val COLUMN_ENABLED = "enabled"
-    const val COLUMN_INCLUDE_PROXY = "includeProxy"
 
     const val KEY_ENABLED = "enabled"
     const val KEY_MODE = "mode"
-    const val KEY_INCLUDE_PROXY = "includeProxy"
 
     /** 彩色桌面图标：换成应用在桌面上的图标，保留原色 */
     const val MODE_LAUNCHER_ICON = 0
@@ -57,7 +55,6 @@ object ModulePrefs {
         prefs.edit()
             .putBoolean(KEY_ENABLED, true)
             .putInt(KEY_MODE, MODE_LAUNCHER_ICON)
-            .putBoolean(KEY_INCLUDE_PROXY, false)
             .apply()
     }
 
@@ -68,8 +65,7 @@ object ModulePrefs {
      */
     fun read(prefs: SharedPreferences): ModuleOptions = derive(
         mode = prefs.getInt(KEY_MODE, MODE_LAUNCHER_ICON),
-        enabled = prefs.getBoolean(KEY_ENABLED, true),
-        includeProxy = prefs.getBoolean(KEY_INCLUDE_PROXY, false)
+        enabled = prefs.getBoolean(KEY_ENABLED, true)
     )
 
     /**
@@ -80,21 +76,18 @@ object ModulePrefs {
      */
     fun fromValues(values: Map<String, String>): ModuleOptions = derive(
         mode = values[KEY_MODE]?.trim()?.toIntOrNull() ?: MODE_LAUNCHER_ICON,
-        enabled = values[KEY_ENABLED]?.trim()?.toBooleanStrictOrNull() ?: true,
-        includeProxy = values[KEY_INCLUDE_PROXY]?.trim()?.toBooleanStrictOrNull() ?: false
+        enabled = values[KEY_ENABLED]?.trim()?.toBooleanStrictOrNull() ?: true
     )
 
     /** 从 provider 查出来的原始值构造。列里存的是整数，调用方已转好类型 */
-    fun fromRaw(mode: Int, enabled: Boolean, includeProxy: Boolean): ModuleOptions =
-        derive(mode, enabled, includeProxy)
+    fun fromRaw(mode: Int, enabled: Boolean): ModuleOptions = derive(mode, enabled)
 
-    private fun derive(mode: Int, enabled: Boolean, includeProxy: Boolean): ModuleOptions {
+    private fun derive(mode: Int, enabled: Boolean): ModuleOptions {
         val monochrome = mode == MODE_MONOCHROME
         return ModuleOptions(
             enabled = enabled,
             replacement = if (monochrome) ModuleOptions.FORCE_MONOCHROME else ModuleOptions.USE_LAUNCHER_ICON,
-            keepOriginalColor = !monochrome,
-            includeProxyNotifications = includeProxy
+            keepOriginalColor = !monochrome
         )
     }
 }
