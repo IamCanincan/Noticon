@@ -53,3 +53,6 @@ Thumbs.db
 
 # WorkBuddy AI project memory (internal, not source)
 .workbuddy-ai/
+
+# 临时文件（提交信息、构建中间产物等，一律以下划线开头）
+_*
