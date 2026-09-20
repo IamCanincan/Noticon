@@ -20,9 +20,9 @@
   and it only happens when you tap the button - no polling, no telemetry. The
   hooked code that runs inside SystemUI never touches the network.
 - The settings screen was redesigned: a branded header, a one-line status strip,
-  per-section icons, the two switches grouped into a single card, and the update
-  result shown as a coloured chip. Every icon is a hand-written vector drawable,
-  so no icon library was added. Verified in both light and dark theme.
+  per-section icons, and the update result shown as a coloured chip. Every icon
+  is a hand-written vector drawable, so no icon library was added. Verified in
+  both light and dark theme.
 - Module description now mentions both modes (still 26 Chinese characters).
 - scripts/check-device.sh no longer force-stops SystemUI. Force-stopping it
   makes WallpaperManagerService treat SystemUI as an uninstalled package and
