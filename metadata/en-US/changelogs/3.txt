@@ -2,10 +2,11 @@
   The UI is written in Compose with Material 3 Expressive
   (MaterialExpressiveTheme + expressive motion, dynamic color on Android 12+).
 - New: two icon modes to pick from in the UI.
-  * "Colored launcher icon" (default): replace an unthemed notification icon
-    with the app's own launcher icon, original colors kept.
-  * "System monochrome": compress the app's own small icon into a monochrome
-    silhouette and let the system tint it like every other notification.
+  * "System monochrome" (default): compress the app's own small icon into a
+    monochrome silhouette and let the system tint it like every other
+    notification.
+  * "Colored launcher icon": replace an unthemed notification icon with the
+    app's own launcher icon, original colors kept.
 - Switching modes no longer needs a reboot. The settings are re-read while the
   module is running (throttled to once a second), so the next notification you
   receive is rendered with the new mode. Notifications already in the shade keep
@@ -27,3 +28,15 @@
 - scripts/check-device.sh no longer force-stops SystemUI. Force-stopping it
   makes WallpaperManagerService treat SystemUI as an uninstalled package and
   reset the wallpaper to the system default, so the script reboots instead.
+- New: the app's own launcher icon supports the system "themed icons" option
+  (Android 13+). It ships a monochrome layer, so turning themed icons on tints
+  it with your system theme colour.
+- Fixed: the icon mode used when the settings cannot be read at all now matches
+  the default shown in the UI. Previously that fallback was the colored mode
+  while everything else said monochrome, so a fresh install could behave
+  differently from what the settings screen displayed.
+- Fixed: the brand mark in the settings screen was nearly invisible in dark
+  theme. It now sits on a primary-coloured plate instead of reusing the
+  launcher foreground, which is sized and coloured for the home screen.
+- The settings screen now shows a small before/after preview under each mode,
+  so you can see what each one does before picking it.
