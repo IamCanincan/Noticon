@@ -41,6 +41,15 @@ object IconBitmap {
     private const val SOLID_SHAPE_LIMIT = 0.7f
 
     /**
+     * 压出来的形状占整张图的比例，低于下限（几乎全空）或高于上限（几乎全满）都算失败。
+     *
+     * 状态栏只认 alpha，交出去一张空图就是一个看不见的洞，交出去一张满图就是一个纯色块，
+     * 两者都比原图标更糟。这种情况宁可放弃替换、保持原样。
+     */
+    private const val MIN_SHAPE_RATIO = 0.02f
+    private const val MAX_SHAPE_RATIO = 0.85f
+
+    /**
      * 把 Drawable 画成指定边长的方形位图。
      *
      * 关键点：显式调用 setBounds 而不是依赖 intrinsicWidth/Height。
@@ -128,8 +137,10 @@ object IconBitmap {
      *
      * 形状优先取自 alpha 通道：绝大多数图标是透明底 + 图形，alpha 本身就是轮廓。
      * 整张都不透明时（自适应图标光栅化后常见）退化成「与四边底板色差异大的算图形」。
+     *
+     * 压不出像样的形状时返回 null，由上层保持原样 —— 详见 [MIN_SHAPE_RATIO]。
      */
-    fun monochrome(input: Bitmap): Bitmap {
+    fun monochrome(input: Bitmap): Bitmap? {
         val w = input.width
         val h = input.height
         val pixels = IntArray(w * h)
@@ -144,15 +155,23 @@ object IconBitmap {
         val total = pixels.size
         val solidRatio = (total - transparentCount).toFloat() / total
         val useAlpha = transparentCount > total / 20 && solidRatio < SOLID_SHAPE_LIMIT
-        if (useAlpha) {
+        val shapeCount = if (useAlpha) {
             // 透明底上的图形：alpha 本身就是最准的轮廓
+            var count = 0
             for (i in pixels.indices) {
-                if (Color.alpha(pixels[i]) >= MIN_SHAPE_ALPHA) outputPixels[i] = Color.WHITE
+                if (Color.alpha(pixels[i]) >= MIN_SHAPE_ALPHA) {
+                    outputPixels[i] = Color.WHITE
+                    count++
+                }
             }
+            count
         } else {
             // 实心图标：alpha 只描述外轮廓，照搬就是一坨白块，改用二值化挖图形
             binarize(pixels, outputPixels)
         }
+
+        val shapeRatio = shapeCount.toFloat() / total
+        if (shapeRatio < MIN_SHAPE_RATIO || shapeRatio > MAX_SHAPE_RATIO) return null
 
         val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         result.setPixels(outputPixels, 0, w, 0, 0, w, h)
@@ -189,27 +208,37 @@ object IconBitmap {
     }
 
     /**
-     * 亮度二值化，给实心图标挖出里面的图形。
+     * 亮度二值化，给实心图标挖出里面的图形。返回被涂成形状的像素数。
      *
      * 阈值不拍脑袋定常数，用 Otsu 自动求（让前后景的类间方差最大），
      * 各种配色的图标都能自适应。图形通常占比较少，据此决定留暗部还是亮部。
+     *
+     * ⚠ 比较必须用 `<=`：Otsu 返回的阈值 t 语义是「暗部 = [0..t]」，
+     * 端点 t 自己属于暗部。写成 `<` 会把恰好落在阈值上的那一档色调整批漏掉 ——
+     * 两色图标（浅底 + 深图形）里就会出现「暗部 0 个像素」，进而判断成留亮部、
+     * 结果一个像素都不画，交出去一张全空图。
      */
-    private fun binarize(pixels: IntArray, output: IntArray) {
+    private fun binarize(pixels: IntArray, output: IntArray): Int {
         val threshold = otsuThreshold(pixels)
         var dark = 0
         var light = 0
         for (pixel in pixels) {
             if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
-            if (luma(pixel) < threshold) dark++ else light++
+            if (luma(pixel) <= threshold) dark++ else light++
         }
-        if (dark + light == 0) return
+        if (dark + light == 0) return 0
         val keepDark = dark <= light
+        var shapeCount = 0
         for (i in pixels.indices) {
             val pixel = pixels[i]
             if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
-            val isShape = if (keepDark) luma(pixel) < threshold else luma(pixel) >= threshold
-            if (isShape) output[i] = Color.WHITE
+            val isShape = if (keepDark) luma(pixel) <= threshold else luma(pixel) > threshold
+            if (isShape) {
+                output[i] = Color.WHITE
+                shapeCount++
+            }
         }
+        return shapeCount
     }
 
     private fun luma(pixel: Int): Int {

@@ -73,8 +73,10 @@ object NotificationIconPatch {
         val packageManager = context.packageManager
         val appInfo = packageManager.getApplicationInfo(pkg, PackageManager.GET_META_DATA)
         val launcherDrawable = packageManager.getApplicationIcon(appInfo)
-        // 自适应图标光栅化后四周空一圈，先裁掉再放大填满，否则通知里那个图标会很小
-        val launcherBitmap = IconBitmap.fill(IconBitmap.rasterize(launcherDrawable))
+        // ⚠ 必须取前景层，不能整张光栅化：自适应图标整张画出来是一块不透明的
+        // 彩色方块（遮罩贴边裁到整个画布），而状态栏只拿 alpha 通道上色，
+        // 交出去就是一个纯色圆饼。只有前景层是「透明底 + 图形」，alpha 才有意义。
+        val launcherBitmap = IconBitmap.fill(IconBitmap.foregroundOf(launcherDrawable))
         return IconBitmap.applySmallIcon(Icon.createWithBitmap(launcherBitmap), notification)
     }
 
@@ -101,6 +103,8 @@ object NotificationIconPatch {
         val bitmap = IconBitmap.decode(smallIcon, context) ?: return false
         // 已经是单色的就不用再压一遍
         if (ToneCheck.isGrayscale(bitmap)) return false
-        return IconBitmap.applySmallIcon(Icon.createWithBitmap(IconBitmap.monochrome(bitmap)), notification)
+        // 压不出像样的形状（全空/全满）就保持原样，别交一张更糟的图出去
+        val monochrome = IconBitmap.monochrome(bitmap) ?: return false
+        return IconBitmap.applySmallIcon(Icon.createWithBitmap(monochrome), notification)
     }
 }

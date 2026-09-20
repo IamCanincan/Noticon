@@ -19,6 +19,19 @@ class NoticonModule : XposedModule() {
         const val SYSTEM_UI = "com.android.systemui"
     }
 
+    /**
+     * 模块被加载进某个进程时先报一声。
+     *
+     * 这一行是排查时的分水岭：有它说明框架确实加载了模块，问题在后面的挂钩；
+     * 没它就说明框架压根没把模块放进这个进程，再怎么查挂钩都是白费力气。
+     * 所以哪怕什么都还没做，也要先把这行打出来。
+     */
+    override fun onModuleLoaded(param: XposedModuleInterface.ModuleLoadedParam) {
+        ModuleRuntime.logI(
+            "module loaded in ${param.processName} (systemServer=${param.isSystemServer})"
+        )
+    }
+
     override fun onPackageReady(param: XposedModuleInterface.PackageReadyParam) {
         if (param.packageName != SYSTEM_UI) return
         ModuleRuntime.logI("attaching to SystemUI (api=${getApiVersion()}, framework=${getFrameworkName()})")
