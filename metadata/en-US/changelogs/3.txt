@@ -6,6 +6,10 @@
     with the app's own launcher icon, original colors kept.
   * "System monochrome": compress the app's own small icon into a monochrome
     silhouette and let the system tint it like every other notification.
+- Switching modes no longer needs a reboot. The settings are re-read while the
+  module is running (throttled to once a second), so the next notification you
+  receive is rendered with the new mode. Notifications already in the shade keep
+  their icon until they are loaded again.
 - The module reads those settings from the app's SharedPreferences through
   LibXposed remote preferences (getRemotePreferences, API 102). If the
   framework does not advertise that capability, or the app was never opened,

@@ -284,7 +284,7 @@ object SystemUiHooks {
     }
 
     private fun shouldKeepColor(): Boolean {
-        val options = ModuleRuntime.options
+        val options = ModuleRuntime.options()
         return options.enabled && options.keepOriginalColor
     }
 }

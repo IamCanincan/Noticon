@@ -26,7 +26,9 @@ object NotificationIconPatch {
         try {
             val notification = sbn.notification ?: return
             val pkg = sbn.packageName
-            val options = ModuleRuntime.options
+            // 每次处理通知都取一次当前选项（内部按 TTL 重读远程配置），
+            // 所以界面里切换模式后，新通知立刻按新模式处理，不需要重启
+            val options = ModuleRuntime.options()
             if (!options.enabled) return
 
             // 1) 排除名单。代发通知（opPkg 与 pkg 不一致）按开关单独决定要不要放行

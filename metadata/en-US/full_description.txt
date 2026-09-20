@@ -6,7 +6,7 @@ Android 12 and later force-tint notification small icons: apps that didn't ship 
 
 ## Two modes
 
-The app has a launcher entry and a settings screen; pick a mode there and it takes effect after the next SystemUI restart.
+The app has a launcher entry and a settings screen; pick a mode there and it applies right away — no reboot needed for mode changes. New notifications are rendered with the mode you picked; the ones already sitting in the shade keep their icon until they are loaded again.
 
 - **Colored launcher icon** (default): swap the unthemed icon for the app's own launcher icon, original colors kept.
 - **System monochrome**: compress the app's own small icon into a monochrome silhouette and let the system tint it like every other notification.

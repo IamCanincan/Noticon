@@ -179,7 +179,7 @@ private fun StatusCard(enabled: Boolean, mode: Int) {
             Text("当前模式：$modeName", style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(2.dp))
             Text(
-                "改动后需重启系统界面（或重启设备）才生效",
+                "改动立即生效，新收到的通知会按新模式显示；已经在通知栏里的那条要等它重新加载",
                 style = MaterialTheme.typography.bodySmall
             )
         }
