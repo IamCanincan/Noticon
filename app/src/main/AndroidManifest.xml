@@ -42,8 +42,7 @@
             设置界面，同时让模块在桌面上有个图标。
 
             它不参与挂钩：挂钩仍然只发生在 SystemUI 进程里。这个 Activity 的职责
-            只有两个 —— 提供入口图标、把「图标模式」写进 SharedPreferences，
-            由模块侧用 LibXposed 的 getRemotePreferences 读走。
+            只有两个 —— 提供入口图标、把「图标模式」写进 SharedPreferences。
 
             加了 Activity 不影响模块元数据：模块名仍是 android:label，
             描述仍是 android:description，作用域仍是 scope.list。
@@ -58,5 +57,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            配置通道：把界面里选的「图标模式」交给 SystemUI 进程里的模块。
+
+            为什么需要它：模块既读不到本应用的私有目录（系统隔离，表现为 ENOENT），
+            也用不了 LibXposed 的远程配置 —— 实测 Vector 2.2 的 getRemotePreferences
+            返回空对象、openRemoteFile 找不到任何文件，配置根本传不过去。
+            ContentProvider 不依赖框架实现，Vector / LSPosed 上都能用。
+
+            安全：只读，且用签名级权限 android.permission.STATUS_BAR 限流 ——
+            只有 SystemUI、system_server 这类系统组件持有该权限，普通应用查不进来；
+            provider 内部还会再按调用方包名校验一次。
+
+            它同样不影响模块元数据：作用域仍是 scope.list，模块仍只注入 SystemUI。
+        -->
+        <provider
+            android:name=".data.ConfigProvider"
+            android:authorities="com.iamcanincan.noticon.config"
+            android:exported="true"
+            android:readPermission="android.permission.STATUS_BAR" />
     </application>
 </manifest>

@@ -32,7 +32,8 @@ Android 12 起系统会强行把通知小图标统一着色，没做单色适配
 
 ## 怎么确认生效
 
-日志里出现 `patched <包名> 2->1` 就是替换成功了（图标类型从「资源」变成「位图」）：
+日志里出现 `patched <包名> 2->1 via=monochrome` 就是替换成功了（图标类型从「资源」变成「位图」，
+`via=` 后面是本次实际用的模式）：
 
 ```bash
 adb logcat -s Noticon -d | grep patched
@@ -41,10 +42,11 @@ adb logcat -s Noticon -d | grep patched
 启动时还会打一行配置，确认界面里的设置被读到了：
 
 ```
-options: enabled=true mode=0 keepColor=true
+options: enabled=true mode=monochrome keepColor=false preserveTinted=true includeProxy=false (source=provider)
 ```
 
-`mode=0` 是彩色桌面图标，`mode=1` 是系统黑白。若这行显示 `framework has no remote preferences support`，说明你的框架不提供远程配置能力，模块会退回默认值（等于彩色桌面图标模式）。
+`mode=launcher-icon` 是彩色桌面图标，`mode=monochrome` 是系统黑白。`source=` 表示这行配置是从哪条通道读到的：
+正常情况下是 `provider`（应用暴露的只读配置通道）。若显示别的来源，说明 provider 没查到，模块在用备选通道或默认值。
 
 ## 安装
 
@@ -128,7 +130,13 @@ java -jar "$BT/lib/apksigner.jar" sign --ks noticon-release.jks --ks-key-alias n
 - 挂钩点：`NotificationRowBinderImpl#inflateViews`（替换图标）、`IconManager#setIcon`、
   `StatusBarIconView#updateIconColor`、`Notification.Builder#processSmallIconColor`（保色）。
 - 界面与模块的配置通道：界面写自己的 SharedPreferences（文件名 `noticon`），
-  模块侧用 API 102 的 `getRemotePreferences("noticon")` 读；框架不支持或界面没打开过时退回默认值。
+  模块侧通过本应用暴露的**只读 ContentProvider**（`com.iamcanincan.noticon.config`，读取需要签名级权限
+  `android.permission.STATUS_BAR`）跨进程读取；读不到时按 `direct-file → openRemoteFile → getRemotePreferences`
+  依次回退，全部失败才退回默认值。
+- 之所以不用 LibXposed 的 `getRemotePreferences` 当主通道：部分框架（实测 Vector 2.2）声明了远程配置能力位，
+  但实现是空壳 —— `getRemotePreferences` 返回空对象、`openRemoteFile` 找不到任何文件，配置根本传不过去。
+  ContentProvider 是 Android 标准机制，不依赖框架实现。**这不影响模块元数据：仍是 API 102，作用域仍由
+  `staticScope=true` + `scope.list` 写死。**
 - 界面用 Compose + Material3，`MaterialExpressiveTheme` + `MotionScheme.expressive()`。
   注意 material3 的版本下限是 **1.5.0-alpha**：MD3E 的公开 API 在 1.4.0 稳定版里还是 internal。
 - 全部通过反射定位挂钩目标，找不到就跳过并打日志，因此不同 Android 版本间不会崩。
@@ -144,6 +152,7 @@ com.iamcanincan.noticon
 ├── engine/ModuleRuntime           进程内共享的 Context 与选项
 ├── model/ModuleOptions            行为开关与默认值
 ├── data/ModulePrefs               配置读写（界面与模块共用的文件名与键）
+├── data/ConfigProvider            只读配置 provider，把设置跨进程交给模块
 ├── ui/MainActivity                设置界面入口（同时是桌面图标）
 ├── ui/SettingsScreen              设置界面
 ├── ui/theme/Theme                 主题（动态取色 + MD3E）

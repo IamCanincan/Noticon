@@ -44,6 +44,26 @@ data class ModuleOptions(
     /** 永不处理的应用包名 */
     var excludedPackages: Set<String> = emptySet()
 ) {
+
+    /** 替换策略的可读名字，只用于日志 */
+    val replacementName: String
+        get() = when (replacement) {
+            USE_LAUNCHER_ICON -> "launcher-icon"
+            FORCE_MONOCHROME -> "monochrome"
+            LAUNCHER_ICON_MONOCHROME -> "launcher-icon-mono"
+            else -> "unknown($replacement)"
+        }
+
+    /**
+     * 一行日志摘要。
+     *
+     * 排配置通道的问题全靠它 —— 只打「读到了没有」分不清
+     * 「读到了但值是默认的」和「根本没读到、退回默认了」。
+     */
+    fun describe(): String =
+        "enabled=$enabled mode=$replacementName keepColor=$keepOriginalColor" +
+            " preserveTinted=$preserveTinted includeProxy=$includeProxyNotifications"
+
     companion object {
         /** 未适配 → 直接换成彩色的应用启动图标 */
         const val USE_LAUNCHER_ICON = 0

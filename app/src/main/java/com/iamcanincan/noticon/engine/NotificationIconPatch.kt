@@ -57,7 +57,10 @@ object NotificationIconPatch {
             }
             // 只有真的换了才打日志；跳过的情况不打，免得日志里分不清「换了」和「没动」
             if (replaced) {
-                ModuleRuntime.logI("patched $pkg $beforeType->${iconType(notification.smallIcon)}")
+                ModuleRuntime.logI(
+                    "patched $pkg $beforeType->${iconType(notification.smallIcon)}" +
+                        " via=${options.replacementName}"
+                )
             }
         } catch (t: Throwable) {
             ModuleRuntime.logE("patch failed", t)

@@ -7,8 +7,8 @@ import com.iamcanincan.noticon.model.ModuleOptions
 /**
  * 模块配置的存储约定 —— 界面进程与 SystemUI 进程之间的唯一通道。
  *
- * 界面（App 进程）用普通的 [Context.getSharedPreferences] 写；
- * 模块（SystemUI 进程）用 LibXposed API 102 的 `getRemotePreferences` 读。
+ * 界面（App 进程）用普通的 [Context.getSharedPreferences] 写；模块（SystemUI 进程）
+ * 通过本应用暴露的只读 ContentProvider（见 [ConfigProvider]）读。
  * **两边必须用同一个文件名**，否则模块读到的永远是默认值，界面改了也不生效。
  *
  * 界面只暴露「模式」这一个选择，其余开关由模式推导 —— 因为替换策略和
@@ -17,8 +17,25 @@ import com.iamcanincan.noticon.model.ModuleOptions
  */
 object ModulePrefs {
 
+    /** 界面侧日志 TAG，和模块侧共用，方便在同一份 logcat 里对照两边看到的东西 */
+    const val TAG = "Noticon"
+
     /** SharedPreferences 文件名，两边共用 */
     const val FILE = "noticon"
+
+    /**
+     * 配置通道 provider 的 authority 后缀。
+     *
+     * 完整 authority = 包名 + 这个后缀（清单里写死，模块侧按同一规则拼）。
+     * 之所以不用 LibXposed 的 getRemotePreferences：实测 Vector 2.2 返回空对象、
+     * openRemoteFile 也找不到文件，配置根本传不到模块 —— 详见 [ConfigProvider]。
+     */
+    const val AUTHORITY_SUFFIX = ".config"
+
+    /** provider 返回的列名，模块侧按这些名字取值 */
+    const val COLUMN_MODE = "mode"
+    const val COLUMN_ENABLED = "enabled"
+    const val COLUMN_INCLUDE_PROXY = "includeProxy"
 
     const val KEY_ENABLED = "enabled"
     const val KEY_MODE = "mode"
@@ -49,14 +66,35 @@ object ModulePrefs {
      *
      * [ModuleOptions.keepOriginalColor] 由模式推导，不单独存 —— 见类注释。
      */
-    fun read(prefs: SharedPreferences): ModuleOptions {
-        val mode = prefs.getInt(KEY_MODE, MODE_LAUNCHER_ICON)
+    fun read(prefs: SharedPreferences): ModuleOptions = derive(
+        mode = prefs.getInt(KEY_MODE, MODE_LAUNCHER_ICON),
+        enabled = prefs.getBoolean(KEY_ENABLED, true),
+        includeProxy = prefs.getBoolean(KEY_INCLUDE_PROXY, false)
+    )
+
+    /**
+     * 从直接解析配置文件得到的键值对构造。
+     *
+     * XML 里所有值都是字符串（`<int name="mode" value="1" />`），
+     * 解析失败或键缺失时一律退回默认值 —— 和 [read] 的兜底行为保持一致。
+     */
+    fun fromValues(values: Map<String, String>): ModuleOptions = derive(
+        mode = values[KEY_MODE]?.trim()?.toIntOrNull() ?: MODE_LAUNCHER_ICON,
+        enabled = values[KEY_ENABLED]?.trim()?.toBooleanStrictOrNull() ?: true,
+        includeProxy = values[KEY_INCLUDE_PROXY]?.trim()?.toBooleanStrictOrNull() ?: false
+    )
+
+    /** 从 provider 查出来的原始值构造。列里存的是整数，调用方已转好类型 */
+    fun fromRaw(mode: Int, enabled: Boolean, includeProxy: Boolean): ModuleOptions =
+        derive(mode, enabled, includeProxy)
+
+    private fun derive(mode: Int, enabled: Boolean, includeProxy: Boolean): ModuleOptions {
         val monochrome = mode == MODE_MONOCHROME
         return ModuleOptions(
-            enabled = prefs.getBoolean(KEY_ENABLED, true),
+            enabled = enabled,
             replacement = if (monochrome) ModuleOptions.FORCE_MONOCHROME else ModuleOptions.USE_LAUNCHER_ICON,
             keepOriginalColor = !monochrome,
-            includeProxyNotifications = prefs.getBoolean(KEY_INCLUDE_PROXY, false)
+            includeProxyNotifications = includeProxy
         )
     }
 }

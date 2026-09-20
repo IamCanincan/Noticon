@@ -12,6 +12,7 @@ import android.graphics.Rect
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import androidx.core.content.res.ResourcesCompat
 import com.iamcanincan.noticon.util.MemberLookup
@@ -263,8 +264,8 @@ object IconBitmap {
                 Icon.TYPE_RESOURCE -> fromResources(context, icon.resId)
                 Icon.TYPE_BITMAP, Icon.TYPE_ADAPTIVE_BITMAP -> MemberLookup.readField(icon, "mObj1") as? Bitmap
                 Icon.TYPE_URI, Icon.TYPE_URI_ADAPTIVE_BITMAP -> {
-                    val path = MemberLookup.readField(icon, "mString1") as? String
-                    if (path != null) BitmapFactory.decodeFile(path) else null
+                    val uriString = MemberLookup.readField(icon, "mString1") as? String
+                    if (uriString != null) decodeUri(uriString, context) else null
                 }
                 Icon.TYPE_DATA -> {
                     val bytes = MemberLookup.readField(icon, "mObj1") as? ByteArray
@@ -283,6 +284,23 @@ object IconBitmap {
         }
     } catch (_: Throwable) {
         null
+    }
+
+    /**
+     * 解码 TYPE_URI 图标。
+     *
+     * `mString1` 存的是 URI 字符串（形如 `file:///data/local/tmp/x.png`），
+     * 不能直接喂给 BitmapFactory.decodeFile —— 那个方法要的是文件路径，
+     * 拿到带 scheme 的串会 ENOENT。file:// 剥掉 scheme 取 path，
+     * 其它 scheme（content:// 等）交给 ContentResolver。
+     */
+    private fun decodeUri(uriString: String, context: Context): Bitmap? {
+        val uri = Uri.parse(uriString)
+        return if (uri.scheme == null || uri.scheme == "file") {
+            BitmapFactory.decodeFile(uri.path ?: uriString)
+        } else {
+            context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+        }
     }
 
     /**
