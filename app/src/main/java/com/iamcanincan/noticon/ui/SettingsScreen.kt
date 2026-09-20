@@ -219,15 +219,15 @@ private fun StatusStrip(enabled: Boolean, mode: Int) {
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 15.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 状态点：启用时是实心主色，停用时是中性灰
-            Box(
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(if (enabled) scheme.primary else scheme.outline)
+            // 状态图标：和开关行同款 ic_power，启用时主色、停用时中性灰。
+            // 替换 10dp 小圆点——图标更醒目，开关行上下视觉对齐。
+            Icon(
+                painter = painterResource(R.drawable.ic_power),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = if (enabled) scheme.primary else scheme.outline
             )
             Spacer(Modifier.width(12.dp))
             Column {
@@ -254,8 +254,8 @@ private val Int.modeName: String
 private fun SectionLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 0.6.sp,
         modifier = Modifier.padding(start = 4.dp, top = 8.dp)
