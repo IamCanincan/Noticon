@@ -14,6 +14,12 @@ import io.github.libxposed.api.XposedModuleInterface
  * 挂别的地方没意义。作用域也只写 SystemUI。
  *
  * 桌面图标与设置界面由 [com.iamcanincan.noticon.ui.MainActivity] 提供，与这里的挂钩无关。
+ *
+ * 作用域为什么用 `staticScope=true`（见 `META-INF/xposed/module.prop` + 同目录 `scope.list`）：
+ * 模块只在 SystemUI 里挂钩，作用域编译期就定死、没有动态申请，所以必须是 true。
+ * 不写的话管理器会把全部已装应用列出来让用户勾。
+ * ⚠ module.prop 里**只留 4 个字段、不要写注释** —— `META-INF/xposed/` 下的内容
+ * 会原样随包发出去，注释里写什么用户都能看到（这条说明放这里就是这个原因）。
  */
 class NoticonModule : XposedModule() {
 

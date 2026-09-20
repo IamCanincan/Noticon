@@ -1,8 +1,4 @@
 minApiVersion=102
 targetApiVersion=102
-# staticScope=true：模块只作用于 scope.list 里写死的包名，
-# 管理器不把其他应用列出来、也不允许用户把模块勾到别的应用上。
-# 我们只在 SystemUI 里挂钩，作用域是编译期就定死的，没有动态申请，
-# 所以这里必须是 true。不写的话管理器会列出全部已装应用。
 staticScope=true
 exceptionMode=protective
