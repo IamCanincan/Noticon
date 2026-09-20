@@ -10,7 +10,7 @@
         那是给 API <= 93 的旧框架用的，留着反而让模块变成"兼容模式"。
 
         长度约定：中文 <= 26 字，太长在模块列表里会占好几行。
-        当前是 26 字。
+        当前是 26 字，两种模式都提到了。
     -->
-    <string name="xposed_description">把未适配的通知小图标换成应用图标，保留原色；已适配的不动</string>
+    <string name="xposed_description">把未适配的通知小图标换成应用图标或单色，已适配的不动</string>
 </resources>

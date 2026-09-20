@@ -8,7 +8,7 @@
 
 set -uo pipefail
 
-APK="Noticon-v1.0.2-release.apk"
+APK="Noticon-v1.1.0-release.apk"
 OUT="noticon.log"
 
 # adb server port. The default 5037 falls inside the Windows excluded port range
@@ -58,42 +58,29 @@ adb install -r "$APK" || { echo "install failed"; exit 1; }
 
 # --- manual step ------------------------------------------------------------
 echo
-echo "==== MANUAL STEP (cannot be done over adb) ===="
+echo "==== MANUAL STEPS (cannot be done over adb) ===="
 echo "1. Open your Xposed manager (LSPosed / Vector)"
 echo "2. Modules -> enable Noticon"
 echo "   (no scope to tick: the module declares staticScope=true and ships a"
 echo "    fixed scope.list containing only com.android.systemui)"
+echo "3. Optional: open Noticon in the launcher to pick an icon mode."
+echo "   Defaults apply when the app was never opened."
 echo "==============================================="
 read -r -p "Press Enter when done... "
 
 # --- restart ----------------------------------------------------------------
+# Reboot only. Do NOT use `am force-stop com.android.systemui` here:
+# the static wallpaper engine (ImageWallpaper) runs inside the SystemUI process,
+# and WallpaperManagerService treats a force-stopped package as an uninstalled
+# one, so it clears the wallpaper and the user is left with the default gradient.
+# `shell kill <pid>` is not an option either - the shell user may not signal
+# SystemUI ("Operation not permitted").
 echo
-echo "How to reload SystemUI?"
-echo "  1) restart SystemUI only  (fast, usually enough)"
-echo "  2) full reboot            (more reliable)"
-read -r -p "Choose 1 or 2 [1]: " MODE
-MODE=${MODE:-1}
-
+echo "==> rebooting to reload SystemUI (force-stop would wipe the wallpaper)"
 adb logcat -c
-
-if [ "$MODE" = "2" ]; then
-  echo "==> rebooting, wait for the device to come back..."
-  adb reboot
-  adb wait-for-device
-  sleep 25
-else
-  # Note: do NOT use `shell kill <pid>` here. The shell user is not allowed to
-  # signal the SystemUI process ("Operation not permitted"); force-stop lets the
-  # framework kill and respawn it instead.
-  echo "==> restarting SystemUI (force-stop)"
-  adb shell am force-stop com.android.systemui || {
-    echo "force-stop failed, falling back to reboot"
-    adb reboot
-    adb wait-for-device
-    sleep 25
-  }
-  sleep 12
-fi
+adb reboot
+adb wait-for-device
+sleep 25
 
 # --- collect ----------------------------------------------------------------
 echo "==> collecting log"

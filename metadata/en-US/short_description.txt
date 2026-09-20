@@ -1,1 +1,1 @@
-Replaces unthemed notification small icons with the app's own launcher icon
+Replaces unthemed notification icons with the app icon or a monochrome one

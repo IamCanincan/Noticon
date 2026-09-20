@@ -35,5 +35,28 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:description="@string/xposed_description"
-        tools:targetApi="34" />
+        android:theme="@style/Theme.Noticon"
+        tools:targetApi="34">
+
+        <!--
+            设置界面，同时让模块在桌面上有个图标。
+
+            它不参与挂钩：挂钩仍然只发生在 SystemUI 进程里。这个 Activity 的职责
+            只有两个 —— 提供入口图标、把「图标模式」写进 SharedPreferences，
+            由模块侧用 LibXposed 的 getRemotePreferences 读走。
+
+            加了 Activity 不影响模块元数据：模块名仍是 android:label，
+            描述仍是 android:description，作用域仍是 scope.list。
+        -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Noticon">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
 </manifest>
