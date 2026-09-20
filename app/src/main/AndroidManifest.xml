@@ -3,6 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
+        联网权限，只服务于设置界面里的「检查更新」按钮：用户点一下才去
+        GitHub 读一次 releases/latest，比对版本号。没有后台轮询、没有上报。
+        挂钩部分（SystemUI 进程里跑的代码）完全不联网。
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
         纯 LibXposed（现代 API 102）模块，不要再放老式 xposed meta-data。
 
         官方说明（LSPosed wiki · Develop Xposed Modules Using Modern Xposed API）：
@@ -23,8 +30,8 @@
         混着放会让管理器把模块当成"兼容模式/不纯粹"的模块处理，作用域列表
         也会退化成列出全部已装应用。已全部删除。
 
-        验证方式（设备上对比 Eta 得出的结论）：Eta 是 API 102 且能正常显示描述
-        和固定作用域，它的 application 标签里一个 xposed meta-data 都没有。
+        验证方式（设备上找一个同样用 API 102、能正常显示描述和固定作用域的模块做对照
+        得出的结论）：那个模块的 application 标签里一个 xposed meta-data 都没有。
 
         注意：res/values/arrays.xml 的 xposed_scope 数组和 res/raw/keep.xml
         都是为那几个 meta-data 服务的，已一并删除。
@@ -50,7 +57,6 @@
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.Noticon">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

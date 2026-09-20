@@ -19,7 +19,11 @@ Either way, icons that are already monochrome are never touched.
 - **Sized to fill**: adaptive icons are rasterized with ~61% of the canvas empty in the middle; the module crops that away and scales the rest up, otherwise the icon ends up small and blurry at notification size.
 - **Material 3 Expressive UI**: Compose + Material3, with dynamic color on Android 12+.
 - **Scoped to SystemUI only**: hooks are installed only into `com.android.systemui`. No other process is touched.
-- No network access, no analytics, no ads.
+- **No background network use**: the only request the app ever makes is the one you trigger
+  yourself by tapping "Check for updates" — a single read of the latest GitHub release to compare
+  version numbers. If `api.github.com` is unreachable (DNS-blocked on many networks), it falls
+  back to the public `gh-proxy.com` mirror of the same API. No polling, no analytics, no
+  telemetry, no ads. The hooked code that runs inside SystemUI does not touch the network at all.
 
 ## Requirements
 

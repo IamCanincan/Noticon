@@ -15,6 +15,10 @@
   so the choice reaches SystemUI without depending on framework-specific
   configuration channels. If the settings cannot be read, the module falls
   back to its built-in defaults and keeps working.
+- New: "Check for updates" in the settings screen. It reads the latest GitHub
+  release and compares version numbers. This is the app's only network access,
+  and it only happens when you tap the button - no polling, no telemetry. The
+  hooked code that runs inside SystemUI never touches the network.
 - Module description now mentions both modes (still 26 Chinese characters).
 - scripts/check-device.sh no longer force-stops SystemUI. Force-stopping it
   makes WallpaperManagerService treat SystemUI as an uninstalled package and

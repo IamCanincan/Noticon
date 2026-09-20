@@ -1,6 +1,8 @@
 package com.iamcanincan.noticon.ui
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,12 +22,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -35,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +52,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.iamcanincan.noticon.R
 import com.iamcanincan.noticon.data.ModulePrefs
+import com.iamcanincan.noticon.update.UpdateChecker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 设置界面。
@@ -65,6 +76,10 @@ fun SettingsScreen() {
     var includeProxy by remember {
         mutableStateOf(prefs.getBoolean(ModulePrefs.KEY_INCLUDE_PROXY, false))
     }
+
+    val version = remember { installedVersion(context) }
+    val scope = rememberCoroutineScope()
+    var update by remember { mutableStateOf<UpdateState>(UpdateState.Idle) }
 
     Scaffold(
         topBar = {
@@ -131,8 +146,24 @@ fun SettingsScreen() {
                 }
             )
 
+            SectionLabel("更新")
+
+            UpdateCard(
+                version = version,
+                state = update,
+                onCheck = {
+                    update = UpdateState.Checking
+                    scope.launch {
+                        // 联网请求不能跑在主线程上，扔到 IO 再回来更新界面状态
+                        val result = withContext(Dispatchers.IO) { UpdateChecker.check(version) }
+                        update = result.toState(version)
+                    }
+                },
+                onOpenPage = { url -> openInBrowser(context, url) }
+            )
+
             NoticeCard()
-            Footer(context)
+            Footer(version)
         }
     }
 }
@@ -308,8 +339,8 @@ private fun NoticeCard() {
             Spacer(Modifier.height(6.dp))
             Text(
                 "模块只作用于「系统界面」，作用域由模块自己固定，不需要手动勾选。"
-                    + "部分框架（如 Vector 2.2）不会自动读取模块声明的作用域，"
-                    + "如果发现模块不生效，先在框架的模块详情里确认作用域里有「系统界面」。",
+                    + "如果发现模块不生效，先在框架的模块详情里确认模块已启用、"
+                    + "作用域里有「系统界面」，然后重启设备。",
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -317,21 +348,124 @@ private fun NoticeCard() {
 }
 
 @Composable
-private fun Footer(context: Context) {
-    val version = remember {
-        runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "?"
-    }
+private fun Footer(version: String) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         HorizontalDivider(
             modifier = Modifier.padding(bottom = 14.dp),
             color = MaterialTheme.colorScheme.outlineVariant
         )
         Text(
-            "版本 $version · MIT 许可 · 无联网、无统计、无广告",
+            "版本 $version · MIT 许可 · 无统计、无广告",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+/** 本机 versionName。取不到就显示 ? —— 只用于展示和版本比对，不影响模块行为 */
+private fun installedVersion(context: Context): String = runCatching {
+    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+}.getOrNull() ?: "?"
+
+/** 检查更新的界面状态 */
+private sealed interface UpdateState {
+
+    /** 还没查过 */
+    data object Idle : UpdateState
+
+    data object Checking : UpdateState
+
+    /** 查完了：一行结论；发现新版本时额外带发布页地址 */
+    data class Done(val message: String, val url: String? = null) : UpdateState
+}
+
+/**
+ * 把检查结果翻成给用户看的一句话。
+ *
+ * 「已是最新」要分两种说法：远端和本地一样，就是普通的最新；
+ * 远端比本地还旧，说明本地装的是还没发布的版本（自己构建的），
+ * 这时候提示「去升级到更老的版本」显然不对。
+ */
+private fun UpdateChecker.Result.toState(current: String): UpdateState = when (this) {
+    is UpdateChecker.Result.Newer ->
+        UpdateState.Done("发现新版本 $version（当前 $current）", url)
+
+    is UpdateChecker.Result.UpToDate ->
+        if (version == current) UpdateState.Done("已是最新版本")
+        else UpdateState.Done("已是最新（本地 $current 比已发布的 $version 还新）")
+
+    is UpdateChecker.Result.Failed ->
+        UpdateState.Done("检查失败：$reason")
+}
+
+/** 用系统浏览器打开链接；设备上没有浏览器时静默忽略，不影响界面其余部分 */
+private fun openInBrowser(context: Context, url: String) {
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+}
+
+@Composable
+private fun UpdateCard(
+    version: String,
+    state: UpdateState,
+    onCheck: () -> Unit,
+    onOpenPage: (String) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = scheme.surface)
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text("检查更新", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "当前版本 $version",
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "只有点下面的按钮才会联网：先直连 GitHub，连不上时走公共加速镜像。"
+                    + "这是本应用唯一的联网行为，没有统计也没有上报。",
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant
+            )
+
+            val done = state as? UpdateState.Done
+            if (done != null) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    done.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val checking = state is UpdateState.Checking
+                Button(onClick = onCheck, enabled = !checking) {
+                    if (checking) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = LocalContentColor.current
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (checking) "检查中…" else "检查更新")
+                }
+                val url = done?.url
+                if (url != null) {
+                    Spacer(Modifier.width(10.dp))
+                    OutlinedButton(onClick = { onOpenPage(url) }) { Text("打开发布页") }
+                }
+            }
+        }
     }
 }

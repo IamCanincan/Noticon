@@ -80,11 +80,21 @@ echo "==> rebooting to reload SystemUI (force-stop would wipe the wallpaper)"
 adb logcat -c
 adb reboot
 adb wait-for-device
-sleep 25
 
 # --- collect ----------------------------------------------------------------
-echo "==> collecting log"
-adb logcat -s Noticon -d > "$OUT" 2>&1
+# Poll while the system boots instead of sleeping first and dumping once.
+# Each logcat buffer is only 256 KiB, and a busy boot can roll it over within a
+# minute - a single `logcat -d` after a fixed sleep then comes back empty even
+# though the module logged everything fine. Polling catches the lines while
+# they are still in the buffer; the dedup pass below removes the repeats.
+echo "==> collecting log (up to ~90s, stops early once the hooks are reported)"
+: > "$OUT"
+for _ in $(seq 1 30); do
+  adb logcat -s Noticon -d >> "$OUT" 2>&1 || true
+  if grep -q "inflateViews hooked" "$OUT" 2>/dev/null; then break; fi
+  sleep 2
+done
+awk '!seen[$0]++' "$OUT" > "$OUT.tmp" && mv "$OUT.tmp" "$OUT"
 
 echo
 echo "----- $OUT -----"
@@ -95,7 +105,10 @@ if [ "${LINES:-0}" -eq 0 ]; then
   echo "No output. Likely causes:"
   echo "  - module not enabled in the manager"
   echo "  - framework does not support LibXposed API 102"
-  echo "  - SystemUI had not finished restarting yet (try again: adb -P $ADB_PORT logcat -s Noticon)"
+  echo "  - SystemUI had not finished restarting yet"
+  echo "  - the log buffer rolled over before we read it. Re-check right after a"
+  echo "    fresh event: adb -P $ADB_PORT logcat -c, then trigger a notification,"
+  echo "    then adb -P $ADB_PORT logcat -s Noticon -d"
 else
   echo "Saved to $OUT - paste it back for analysis."
 fi

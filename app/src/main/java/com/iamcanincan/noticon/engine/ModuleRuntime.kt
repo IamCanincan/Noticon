@@ -191,7 +191,11 @@ object ModuleRuntime {
      * 而调用方 uid 是 SystemUI，框架会判 `Given calling package android does not
      * match caller's uid <systemui>` 并抛 SecurityException。必须换成
      * SystemUI 自己的包上下文，调用方包名才对得上。
+     *
+     * getSystemContext 没有公开 API，只能反射 —— 这是 attach 阶段（还没有挂钩点）
+     * 唯一能拿到 SystemUI Context 的途径，故抑制私有 API 告警。
      */
+    @SuppressLint("DiscouragedPrivateApi", "PrivateApi")
     private fun systemUiContext(): Context? {
         systemContext?.let { return it }
         val base = runCatching {
