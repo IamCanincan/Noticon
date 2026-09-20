@@ -3,7 +3,11 @@ package com.iamcanincan.noticon.model
 /**
  * 模块的行为开关。
  *
- * 默认值 = 没有配置时的兜底行为（等价于「彩色桌面图标」模式）。
+ * 默认值 = 没有配置时的兜底行为，**必须等价于「系统黑白通知」模式** ——
+ * 与 [com.iamcanincan.noticon.data.ModulePrefs.DEFAULT_MODE] 保持同一个语义。
+ * 否则配置通道全挂时（provider / 直接读文件 / 远程配置全失败）模块会按彩色模式跑，
+ * 而界面、README、`seedIfAbsent` 都写着默认单色，
+ * 出现「用户从没改过设置、实际行为却和界面上显示的不一样」。
  * 界面里改了设置后，值由 [com.iamcanincan.noticon.data.ModulePrefs] 从
  * SharedPreferences 读出来覆盖 —— 模块侧通过本应用暴露的只读 ContentProvider 跨进程取。
  *
@@ -23,20 +27,21 @@ data class ModuleOptions(
     /**
      * 跳过系统的统一着色、保住图标原色。
      *
-     * 默认开：默认策略塞进去的是彩色的应用图标，不保色的话系统会把它
-     * 又染成单色，等于白换一场。只有改用 FORCE_MONOCHROME（压成单色剪影）
-     * 时才需要关掉 —— 那种形状本来就该由系统按主题上色。
+     * 默认关：默认策略是 FORCE_MONOCHROME（压成单色剪影），那种形状本来
+     * 就该由系统按主题上色，保色反而会把刚压好的单色又染回彩色。
+     * 只有走 USE_LAUNCHER_ICON（塞彩色应用图标）时才需要打开。
+     * ⚠ 必须与 [replacement] 成对改，见类注释。
      */
-    var keepOriginalColor: Boolean = true,
+    var keepOriginalColor: Boolean = false,
 
     /**
      * 替换策略，取值见下面的常量。
      *
-     * 默认走「直接换成桌面上那个应用图标」：未适配的小图标本来就是一坨看不出
-     * 是谁的色块，用用户天天在桌面上见到、认得的那个图标替掉最直观。
-     * 彩色原样保留（配合 [keepOriginalColor]），不做任何去色处理。
+     * 默认走 FORCE_MONOCHROME（把应用自己给的小图标就地压成单色剪影），
+     * 与 [com.iamcanincan.noticon.data.ModulePrefs.DEFAULT_MODE] 一致。
+     * ⚠ 改这里必须同时改 [keepOriginalColor]，见类注释。
      */
-    var replacement: Int = USE_LAUNCHER_ICON
+    var replacement: Int = FORCE_MONOCHROME
 ) {
 
     /** 替换策略的可读名字，只用于日志 */
