@@ -49,6 +49,11 @@ object IconBitmap {
     private const val MIN_SHAPE_RATIO = 0.02f
     private const val MAX_SHAPE_RATIO = 0.85f
 
+    /** 二值化时每个像素的归类，用于连通性判断 */
+    private const val CLASS_TRANSPARENT = 0
+    private const val CLASS_DARK = 1
+    private const val CLASS_LIGHT = 2
+
     /**
      * 把 Drawable 画成指定边长的方形位图。
      *
@@ -183,7 +188,7 @@ object IconBitmap {
             count
         } else {
             // 实心图标：alpha 只描述外轮廓，照搬就是一坨白块，改用二值化挖图形
-            binarize(pixels, outputPixels)
+            binarize(pixels, outputPixels, w, h)
         }
 
         val shapeRatio = shapeCount.toFloat() / total
@@ -226,36 +231,143 @@ object IconBitmap {
     /**
      * 亮度二值化，给实心图标挖出里面的图形。返回被涂成形状的像素数。
      *
-     * 阈值不拍脑袋定常数，用 Otsu 自动求（让前后景的类间方差最大），
-     * 各种配色的图标都能自适应。图形通常占比较少，据此决定留暗部还是亮部。
+     * 阈值不拍脑袋定常数，用 Otsu 自动求（让前后景的类间方差最大），各种配色的图标都能自适应。
      *
      * ⚠ 比较必须用 `<=`：Otsu 返回的阈值 t 语义是「暗部 = [0..t]」，
      * 端点 t 自己属于暗部。写成 `<` 会把恰好落在阈值上的那一档色调整批漏掉 ——
      * 两色图标（浅底 + 深图形）里就会出现「暗部 0 个像素」，进而判断成留亮部、
      * 结果一个像素都不画，交出去一张全空图。
      */
-    private fun binarize(pixels: IntArray, output: IntArray): Int {
+    private fun binarize(pixels: IntArray, output: IntArray, w: Int, h: Int): Int {
         val threshold = otsuThreshold(pixels)
+        val total = pixels.size
+        val classes = classBuffer(total)
         var dark = 0
         var light = 0
-        for (pixel in pixels) {
-            if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
-            if (luma(pixel) <= threshold) dark++ else light++
+        for (i in 0 until total) {
+            val pixel = pixels[i]
+            classes[i] = when {
+                Color.alpha(pixel) < MIN_SHAPE_ALPHA -> CLASS_TRANSPARENT
+                luma(pixel) <= threshold -> {
+                    dark++
+                    CLASS_DARK
+                }
+                else -> {
+                    light++
+                    CLASS_LIGHT
+                }
+            }
         }
         if (dark + light == 0) return 0
-        val keepDark = dark <= light
+
+        val keepDark = keepDarkSide(classes, w, h, dark, light)
         var shapeCount = 0
-        for (i in pixels.indices) {
-            val pixel = pixels[i]
-            if (Color.alpha(pixel) < MIN_SHAPE_ALPHA) continue
-            val isShape = if (keepDark) luma(pixel) <= threshold else luma(pixel) > threshold
-            if (isShape) {
+        for (i in 0 until total) {
+            val cls = classes[i]
+            if (cls == CLASS_TRANSPARENT) continue
+            if ((cls == CLASS_DARK) == keepDark) {
                 output[i] = Color.WHITE
                 shapeCount++
             }
         }
         return shapeCount
     }
+
+    /**
+     * 决定形状取暗部还是亮部 —— 这是「压出来是图形还是背景」的分水岭。
+     *
+     * 原来按「像素少的那一类是图形」猜。这个假设在图标里常常不成立：
+     * 大 logo 顶到边、只有四角露出底色时，少数派反而是**背景**，
+     * 于是压出来是个「框 + 中间一个洞」，和原图正好相反。
+     *
+     * 改成看**连通性**：背景通常与画布四边相连，图形是被背景包住的内部块。
+     * 两类各做一次「从边界出发的同类连通填充」，与边界相连的比例低的那个才是形状。
+     * 两类打平（上下对半分、图形本身也顶到边之类）时退回「取较少一侧」，
+     * 保证至少不会比以前更差。
+     */
+    private fun keepDarkSide(classes: IntArray, w: Int, h: Int, dark: Int, light: Int): Boolean {
+        val darkBorder = borderConnectedRatio(classes, w, h, CLASS_DARK, dark)
+        val lightBorder = borderConnectedRatio(classes, w, h, CLASS_LIGHT, light)
+        if (darkBorder == lightBorder) return dark <= light
+        return darkBorder < lightBorder
+    }
+
+    /**
+     * 某一类里，与画布四边相连的像素占该类的比例。
+     *
+     * 用显式栈做四邻域洪泛，不递归 —— 整张图标可能连成一片，递归会爆栈。
+     * 缓冲区复用，这段代码在通知刷新的路径上。
+     */
+    private fun borderConnectedRatio(
+        classes: IntArray, w: Int, h: Int, kind: Int, kindTotal: Int
+    ): Float {
+        if (kindTotal == 0) return 0f
+        val total = w * h
+        val visited = visitedBuffer(total)
+        visited.fill(false)
+        val stack = stackBuffer(total)
+        var top = 0
+
+        fun seed(i: Int) {
+            if (classes[i] == kind && !visited[i]) {
+                visited[i] = true
+                stack[top++] = i
+            }
+        }
+
+        for (x in 0 until w) {
+            seed(x)
+            seed((h - 1) * w + x)
+        }
+        for (y in 0 until h) {
+            seed(y * w)
+            seed(y * w + w - 1)
+        }
+
+        var connected = 0
+        while (top > 0) {
+            val i = stack[--top]
+            connected++
+            val x = i % w
+            val y = i / w
+            if (x > 0) seed(i - 1)
+            if (x < w - 1) seed(i + 1)
+            if (y > 0) seed(i - w)
+            if (y < h - 1) seed(i + w)
+        }
+        return connected.toFloat() / kindTotal
+    }
+
+    private fun classBuffer(size: Int): IntArray {
+        var buf = classBufferCache
+        if (buf == null || buf.size < size) {
+            buf = IntArray(size)
+            classBufferCache = buf
+        }
+        return buf
+    }
+
+    private fun visitedBuffer(size: Int): BooleanArray {
+        var buf = visitedBufferCache
+        if (buf == null || buf.size < size) {
+            buf = BooleanArray(size)
+            visitedBufferCache = buf
+        }
+        return buf
+    }
+
+    private fun stackBuffer(size: Int): IntArray {
+        var buf = stackBufferCache
+        if (buf == null || buf.size < size) {
+            buf = IntArray(size)
+            stackBufferCache = buf
+        }
+        return buf
+    }
+
+    private var classBufferCache: IntArray? = null
+    private var visitedBufferCache: BooleanArray? = null
+    private var stackBufferCache: IntArray? = null
 
     private fun luma(pixel: Int): Int {
         return (Color.red(pixel) * 299 + Color.green(pixel) * 587 + Color.blue(pixel) * 114) / 1000
