@@ -251,7 +251,16 @@ object SystemUiHooks {
                             arrayOf(context, sbn.notification.smallIcon),
                             Context::class.java, Icon::class.java
                         ) as? Boolean
-                        if (isGrayscale == false) MemberLookup.writeField(view, "mCurrentSetColor", 0)
+                        if (isGrayscale == false) {
+                            // 写失败 = 保色没生效（图标会被系统重新染色）。静默失败最难查，所以打出来
+                            val written = MemberLookup.writeField(view, "mCurrentSetColor", 0)
+                            if (!written) {
+                                ModuleRuntime.logW(
+                                    "mCurrentSetColor not writable on ${view.javaClass.simpleName}," +
+                                        " icon may still be tinted"
+                                )
+                            }
+                        }
                     }
                 }.onFailure { ModuleRuntime.logE("updateIconColor failed", it) }
             }
@@ -292,8 +301,9 @@ object SystemUiHooks {
                     val smallIcon = chain.getArg(0) as Icon
                     val contentView = chain.getArg(1) as RemoteViews
                     val colorUtil = MemberLookup.invoke(chain.thisObject, "getColorUtil")
+                        ?: return@runCatching
                     val isGrayscale = MemberLookup.invoke(
-                        colorUtil!!, "isGrayscaleIcon",
+                        colorUtil, "isGrayscaleIcon",
                         arrayOf(context, smallIcon), Context::class.java, Icon::class.java
                     ) as? Boolean
                     if (isGrayscale == false && context != null) {

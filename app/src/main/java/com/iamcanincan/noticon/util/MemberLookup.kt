@@ -1,7 +1,6 @@
 package com.iamcanincan.noticon.util
 
 import java.lang.reflect.Field
-import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 
 /**
@@ -40,14 +39,26 @@ object MemberLookup {
         }
     }
 
-    fun writeField(target: Any, name: String, value: Any?) {
-        runCatching {
-            val f: Field = target.javaClass.getDeclaredField(name)
-            f.isAccessible = true
-            f.set(target, value)
-        }
-    }
+    /**
+     * 写字段，返回是否真的写进去了。
+     *
+     * 字段改名或不可访问时**静默失败**是最难查的一类问题（表现为「功能没生效但日志干净」），
+     * 所以把结果交回调用方，由它决定要不要打日志。
+     */
+    fun writeField(target: Any, name: String, value: Any?): Boolean = runCatching {
+        val f: Field = target.javaClass.getDeclaredField(name)
+        f.isAccessible = true
+        f.set(target, value)
+        true
+    }.getOrDefault(false)
 
+    /**
+     * 反射调用实例方法。
+     *
+     * **失败一律返回 null**，绝不把异常对象当返回值传出去 —— 那会让调用方的
+     * `!= null` / `!!` 判断误以为调用成功了，问题被推迟到更难查的地方才炸。
+     * 契约与 [invokeStatic] 保持一致，也符合本类「取不到就放弃」的总约定。
+     */
     fun invoke(
         target: Any,
         name: String,
@@ -57,9 +68,8 @@ object MemberLookup {
         val m = declaredMethod(target.javaClass, name, *paramTypes)
         m.isAccessible = true
         m.invoke(target, *args)
-    } catch (e: Throwable) {
-        // 目标方法自己抛的异常才有诊断价值，剥掉反射包装再抛
-        if (e is InvocationTargetException) e.targetException else e
+    } catch (_: Throwable) {
+        null
     }
 
     fun invokeStatic(
