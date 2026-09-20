@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -157,15 +157,33 @@ fun SettingsScreen() {
     }
 }
 
-/** 顶部的品牌头：图标 + 名称 + 一句话说明 */
+/**
+ * 顶部的品牌头：品牌色底板 + "Ni" 字形 + 名称 + 一句话说明。
+ *
+ * 底板用 [androidx.compose.material3.ColorScheme.primary]、字形用 onPrimary ——
+ * 这一对由配色方案保证对比度，深浅色模式下都看得见。
+ * ⚠ 别改回直接用 ic_launcher_foreground：那份字形是硬编码 #031019，
+ *   深色模式下画在 #1A1114 底上等于隐形，而且它带 scale 1.2 是为"占图标 31%"
+ *   算的，放在这里会小得看不清。
+ */
 @Composable
 private fun BrandHeader() {
+    val scheme = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
-            contentDescription = null,
-            modifier = Modifier.size(58.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(scheme.primary),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_brand_mark),
+                contentDescription = null,
+                tint = scheme.onPrimary,
+                modifier = Modifier.size(36.dp)
+            )
+        }
         Spacer(Modifier.width(14.dp))
         Column {
             Text(
@@ -244,14 +262,27 @@ private fun SectionLabel(text: String) {
 /** 可选项左侧的图标底板。宽度固定，开关组的分隔线缩进按它算 */
 private val IconBadgeSize = 44.dp
 
+/**
+ * @param selected 选中态：底板走 primary、图标走 onPrimary。
+ * @param containerColor 底板色覆盖。默认按 [selected] 自动选；
+ *   当宿主卡片本身就是 surfaceVariant 时（比如 [ScopeCard]）必须显式传一个
+ *   和卡片不同的颜色，否则底板和卡片同色、等于没有底板。
+ */
 @Composable
-private fun IconBadge(@DrawableRes icon: Int, selected: Boolean) {
+private fun IconBadge(
+    @DrawableRes icon: Int,
+    selected: Boolean,
+    containerColor: Color = Color.Unspecified
+) {
     val scheme = MaterialTheme.colorScheme
+    val bg = if (containerColor != Color.Unspecified) containerColor
+    else if (selected) scheme.primary
+    else scheme.surfaceVariant
     Box(
         modifier = Modifier
             .size(IconBadgeSize)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) scheme.primary else scheme.surfaceVariant),
+            .background(bg),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -352,7 +383,8 @@ private fun SwitchRow(
         modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconBadge(icon = icon, selected = false)
+        // 底板跟着开关走：打开时是品牌色，关闭时是中性灰，状态一眼可见
+        IconBadge(icon = icon, selected = checked)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
@@ -382,7 +414,12 @@ private fun ScopeCard() {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.Top
         ) {
-            IconBadge(icon = R.drawable.ic_scope, selected = false)
+            // 卡片本身是 surfaceVariant，底板必须换个色，否则两者同色、底板等于不存在
+            IconBadge(
+                icon = R.drawable.ic_scope,
+                selected = false,
+                containerColor = scheme.surface
+            )
             Spacer(Modifier.width(14.dp))
             Column {
                 Text(
