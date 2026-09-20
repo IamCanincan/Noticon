@@ -10,10 +10,11 @@
   module is running (throttled to once a second), so the next notification you
   receive is rendered with the new mode. Notifications already in the shade keep
   their icon until they are loaded again.
-- The module reads those settings from the app's SharedPreferences through
-  LibXposed remote preferences (getRemotePreferences, API 102). If the
-  framework does not advertise that capability, or the app was never opened,
-  the module falls back to the previous built-in defaults and keeps working.
+- The module reads those settings from the app through a read-only
+  ContentProvider the app exposes (guarded by a signature-level permission),
+  so the choice reaches SystemUI without depending on framework-specific
+  configuration channels. If the settings cannot be read, the module falls
+  back to its built-in defaults and keeps working.
 - Module description now mentions both modes (still 26 Chinese characters).
 - scripts/check-device.sh no longer force-stops SystemUI. Force-stopping it
   makes WallpaperManagerService treat SystemUI as an uninstalled package and

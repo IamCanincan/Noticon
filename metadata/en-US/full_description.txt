@@ -33,24 +33,24 @@ Either way, icons that are already monochrome are never touched.
 adb logcat -s Noticon -d | grep patched
 ```
 
-If you see `patched <pkg> 2->1`, the module swapped a resource-type icon for a bitmap — that's the fix landing. If the line is empty, every icon on your device is already monochrome and the module correctly did nothing.
+If you see `patched <pkg> 2->1 via=monochrome`, the module swapped a resource-type icon for a bitmap — that's the fix landing. The part after `via=` is the mode that was actually used. If the line is empty, every icon on your device is already monochrome and the module correctly did nothing.
 
 The startup line shows which settings were read:
 
 ```
-options: enabled=true mode=0 keepColor=true
+options: enabled=true mode=monochrome keepColor=false preserveTinted=true includeProxy=false (source=provider)
 ```
 
-`mode=0` is the colored launcher icon, `mode=1` is system monochrome. If it says
-`framework has no remote preferences support`, the framework does not expose remote
-preferences and the module falls back to its built-in defaults.
+`mode=launcher-icon` is the colored launcher icon, `mode=monochrome` is system monochrome.
+`source=` tells you which channel the settings came from — normally `provider`.
 
 ## Settings plumbing
 
-The UI writes its own SharedPreferences (file name `noticon`); the module reads the same
-file in the SystemUI process through LibXposed remote preferences (`getRemotePreferences`,
-API 102). No configuration is required — if the file is missing, the previous built-in
-defaults apply and the module keeps working.
+The UI writes its own SharedPreferences (file name `noticon`); the module reads them in the
+SystemUI process through a read-only ContentProvider the app exposes, guarded by the
+signature-level `android.permission.STATUS_BAR`. That way the setting reaches SystemUI without
+depending on framework-specific configuration channels. No configuration is required — if the
+settings cannot be read, the built-in defaults apply and the module keeps working.
 
 ## Build
 
