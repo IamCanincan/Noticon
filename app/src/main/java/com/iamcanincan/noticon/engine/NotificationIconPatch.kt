@@ -77,6 +77,12 @@ object NotificationIconPatch {
         // 彩色方块（遮罩贴边裁到整个画布），而状态栏只拿 alpha 通道上色，
         // 交出去就是一个纯色圆饼。只有前景层是「透明底 + 图形」，alpha 才有意义。
         val launcherBitmap = IconBitmap.fill(IconBitmap.foregroundOf(launcherDrawable))
+        // 有些包（例如 com.android.shell）没有真正的前景图形，取出来是张空图。
+        // 交空图出去 = 状态栏上一个看不见的洞，比原图标更糟，宁可不动。
+        if (!IconBitmap.hasContent(launcherBitmap)) {
+            ModuleRuntime.logW("$pkg has no launcher foreground content, kept original")
+            return false
+        }
         return IconBitmap.applySmallIcon(Icon.createWithBitmap(launcherBitmap), notification)
     }
 
@@ -96,6 +102,10 @@ object NotificationIconPatch {
         val launcherDrawable = packageManager.getApplicationIcon(appInfo)
         // 只取前景层，再裁掉四周空白放大填满，最后去掉颜色只留明暗
         val filled = IconBitmap.fill(IconBitmap.foregroundOf(launcherDrawable))
+        if (!IconBitmap.hasContent(filled)) {
+            ModuleRuntime.logW("$pkg has no launcher foreground content, kept original")
+            return false
+        }
         return IconBitmap.applySmallIcon(Icon.createWithBitmap(IconBitmap.grayscale(filled)), notification)
     }
 

@@ -104,9 +104,25 @@ object IconBitmap {
         return rasterize(source, size)
     }
 
+    /**
+     * 位图里是否还有可见像素。
+     *
+     * 全透明就等于什么都没画。状态栏只认 alpha，交一张空图出去会变成一个看不见的洞 ——
+     * 比原来的图标更糟，所以生成图之后必须先过这一关。
+     */
+    fun hasContent(bitmap: Bitmap): Boolean {
+        val w = bitmap.width
+        val h = bitmap.height
+        val pixels = IntArray(w * h)
+        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+        for (pixel in pixels) {
+            if (Color.alpha(pixel) >= MIN_SHAPE_ALPHA) return true
+        }
+        return false
+    }
+
     /** 非透明像素的外接矩形；整张都透明时返回 null */
-    private fun contentBounds(source: Bitmap): Rect? {
-        val w = source.width
+    private fun contentBounds(source: Bitmap): Rect? {        val w = source.width
         val h = source.height
         val pixels = IntArray(w * h)
         source.getPixels(pixels, 0, w, 0, 0, w, h)

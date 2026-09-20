@@ -29,9 +29,6 @@ object ModuleRuntime {
 
     const val TAG = "Noticon"
 
-    /** 唯一注入目标，也是查配置 provider 时要用的调用方包名 */
-    private const val SYSTEM_UI_PKG = "com.android.systemui"
-
     /** 从通知行绑定处顺出来的 SystemUI 上下文 */
     var systemContext: Context? = null
 
@@ -162,18 +159,35 @@ object ModuleRuntime {
      *
      * 这是跨进程拿配置的正路：provider 跑在模块应用进程里，读的是它自己的
      * SharedPreferences，所以既不受 SystemUI 的隔离限制，也不依赖框架实现。
+     *
+     * 每一条提前返回都打日志 —— 这条通道曾经"静默地什么都不返回"，
+     * 结果配置一直用默认值而没人发现，排查时必须有据可查。
      */
     private fun readFromProvider(m: XposedInterface): ModuleOptions? {
-        val context = systemUiContext() ?: return null
-        val pkg = runCatching { m.moduleApplicationInfo?.packageName }.getOrNull() ?: return null
+        val context = systemUiContext()
+        if (context == null) {
+            logW("provider skipped: no SystemUI context yet")
+            return null
+        }
+        val pkg = runCatching { m.moduleApplicationInfo?.packageName }.getOrNull()
+        if (pkg == null) {
+            logW("provider skipped: module package name unavailable")
+            return null
+        }
         val uri = Uri.parse("content://$pkg${ModulePrefs.AUTHORITY_SUFFIX}/config")
         return runCatching {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (!cursor.moveToFirst()) return@use null
-                ModulePrefs.fromRaw(
+                if (!cursor.moveToFirst()) {
+                    // provider 对非可信调用方返回空游标（包名校验没过）
+                    logW("provider returned no row (caller not trusted?)")
+                    return@use null
+                }
+                val options = ModulePrefs.fromRaw(
                     mode = cursor.getInt(cursor.getColumnIndexOrThrow(ModulePrefs.COLUMN_MODE)),
                     enabled = cursor.getInt(cursor.getColumnIndexOrThrow(ModulePrefs.COLUMN_ENABLED)) != 0
                 )
+                logI("provider ok: ${options.describe()}")
+                options
             }
         }.onFailure {
             logW("provider query failed: ${it::class.java.simpleName}: ${it.message}")
@@ -181,34 +195,50 @@ object ModuleRuntime {
     }
 
     /**
-     * 拿一个 SystemUI 的 Context。
+     * 拿一个 SystemUI 自己的 Context。
      *
-     * 优先用挂钩点上顺出来的那个；attach 阶段还没有挂钩点，退而从 ActivityThread
-     * 取系统上下文 —— 这样开机时就能读到配置，不必等第一条通知。
+     * 顺序：
+     * 1. 挂钩点上顺出来的那个（最可靠，一定是 SystemUI 的 Context）；
+     * 2. `ActivityThread.currentApplication()` —— 它的包名就是 com.android.systemui，
+     *    正是 provider 校验需要的调用方身份。
      *
-     * 注意不能直接把系统上下文拿去查 provider：它的包名是 "android"，
-     * 而调用方 uid 是 SystemUI，框架会判 `Given calling package android does not
-     * match caller's uid <systemui>` 并抛 SecurityException。必须换成
-     * SystemUI 自己的包上下文，调用方包名才对得上。
+     * **刻意不走 `getSystemContext()` + `createPackageContext()`**：那个系统上下文的包名是
+     * `android`，要再包一层才可用；而 `createPackageContext` 会进到 `LoadedApk.updateApplicationInfo`
+     * → `createOrUpdateClassLoaderLocked`，框架在这个点上还会再派发一次 packageReady。
+     * 于是我们自己的调用把自己重入进来，且此时 ClassLoader 还没建好、所有目标类都找不到。
+     * 实测过：开机那次 `attaching to SystemUI` 之后 5 个类全 missing、钩子一个都没装上，
+     * 就是这条路径造成的。绕开它，开机第一次派发就能正常装钩。
      *
-     * getSystemContext 没有公开 API，只能反射 —— 这是 attach 阶段（还没有挂钩点）
-     * 唯一能拿到 SystemUI Context 的途径，故抑制私有 API 告警。
+     * 拿不到就返回 null（provider 这条腿这轮跳过，下次 TTL 到点再试），不要退而用 `android` 上下文 ——
+     * 那样只会换来一条 `SecurityException: Given calling package android does not match caller's uid`。
      */
     @SuppressLint("DiscouragedPrivateApi", "PrivateApi")
     private fun systemUiContext(): Context? {
         systemContext?.let { return it }
-        val base = runCatching {
+        applicationContext?.let { return it }
+        return runCatching {
             val activityThread = Class.forName("android.app.ActivityThread")
             val current = activityThread.getMethod("currentActivityThread").invoke(null)
-            val getSystemContext = activityThread.getDeclaredMethod("getSystemContext")
-            getSystemContext.isAccessible = true
-            getSystemContext.invoke(current) as? Context
-        }.onFailure { logW("system context unavailable: ${it::class.java.simpleName}: ${it.message}") }
-            .getOrNull() ?: return null
-        return runCatching { base.createPackageContext(SYSTEM_UI_PKG, 0) }
-            .onFailure { logW("package context unavailable: ${it::class.java.simpleName}: ${it.message}") }
-            .getOrDefault(base)
+            val currentApplication = activityThread.getDeclaredMethod("currentApplication")
+            currentApplication.isAccessible = true
+            currentApplication.invoke(current) as? Context
+        }.onFailure {
+            logW("application context unavailable: ${it::class.java.simpleName}: ${it.message}")
+        }.getOrNull()
     }
+
+    /** SystemUI 进程的 Application，包名就是 com.android.systemui */
+    private val applicationContext: Context?
+        get() = cachedApplicationContext ?: runCatching {
+            val activityThread = Class.forName("android.app.ActivityThread")
+            val current = activityThread.getMethod("currentActivityThread").invoke(null)
+            val method = activityThread.getDeclaredMethod("currentApplication")
+            method.isAccessible = true
+            (method.invoke(current) as? Context)?.also { cachedApplicationContext = it }
+        }.getOrNull()
+
+    @Volatile
+    private var cachedApplicationContext: Context? = null
 
     /**
      * 直接按绝对路径读模块应用的配置文件。

@@ -55,10 +55,22 @@ object SystemUiHooks {
         ICON_MANAGER, STATUS_BAR_ICON, STATUS_BAR_ICON_VIEW, CONTRAST_UTIL
     )
 
-    fun install(module: XposedModule, classLoader: ClassLoader) {
-        reportEnvironment(classLoader)
-        installRowInflation(module, classLoader)
+    /**
+     * 装挂钩。返回「主挂钩是否已就位」。
+     *
+     * ⚠ 返回 false 时调用方**必须重试**：第一次 packageReady 有可能来得太早 ——
+     * 那时框架还在建 ClassLoader（`LoadedApk.createOrUpdateClassLoaderLocked`），
+     * 目标类一个都 load 不出来。实测开机那次就是 5 个类全 missing、一个钩都没装上。
+     *
+     * 重试是幂等的：`hookedMethods` / `installedHookIds` 会挡掉重复挂钩。
+     *
+     * @param quiet 重试时传 true，避免每轮都把环境探测那几行重复刷一遍
+     */
+    fun install(module: XposedModule, classLoader: ClassLoader, quiet: Boolean = false): Boolean {
+        if (!quiet) reportEnvironment(classLoader)
+        if (!installRowInflation(module, classLoader)) return false
         installColorRetention(module, classLoader)
+        return true
     }
 
     /**
@@ -80,13 +92,15 @@ object SystemUiHooks {
     /**
      * 通知行 inflate 之前把小图标换掉。
      * 这是主挂钩点：换图发生在这里，后面几个钩只是保证换完的图不被染回单色。
+     *
+     * 返回是否已就位（false = 目标类还 load 不出来，调用方要重试）。
      */
-    private fun installRowInflation(module: XposedModule, classLoader: ClassLoader) {
+    private fun installRowInflation(module: XposedModule, classLoader: ClassLoader): Boolean {
         val binderClass = MemberLookup.findClass(ROW_BINDER_MODERN, classLoader)
             ?: MemberLookup.findClass(ROW_BINDER_LEGACY, classLoader)
         if (binderClass == null) {
-            ModuleRuntime.logE("NotificationRowBinderImpl not found", NoSuchElementException(ROW_BINDER_MODERN))
-            return
+            ModuleRuntime.logW("NotificationRowBinderImpl not resolvable yet")
+            return false
         }
         // entry 类是「认出哪个参数是通知条目」的钥匙；认不出来也不能就此放弃，
         // 下面退化为「带参数的 inflateViews 都挂上，运行时再逐个参数试着取 sbn」
@@ -100,7 +114,7 @@ object SystemUiHooks {
         }
         if (overloads.isEmpty()) {
             ModuleRuntime.logE("inflateViews not found", NoSuchMethodException("inflateViews"))
-            return
+            return false
         }
 
         for (method in overloads) {
@@ -136,6 +150,7 @@ object SystemUiHooks {
             }
         }
         ModuleRuntime.logI("inflateViews hooked (${overloads.size} overload(s))")
+        return true
     }
 
     /** 顺一个 SystemUI 的 Context 出来，后面取包名资源要用 */
@@ -167,7 +182,9 @@ object SystemUiHooks {
             null
         }
 
-        if (setIcon != null && installedHookIds.add("setIcon")) {
+        if (setIcon == null) {
+            if (iconManager != null) logCandidates(iconManager, "setIcon")
+        } else if (installedHookIds.add("setIcon")) {
             module.hook(setIcon).setId("setIcon").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
                 if (shouldKeepColor()) {
                     for (arg in chain.args) {
@@ -199,30 +216,33 @@ object SystemUiHooks {
             return
         }
         if (!installedHookIds.add("updateIconColor")) return
-        MemberLookup.methodWithParams(iconView, "updateIconColor")?.let { method ->
-            module.hook(method).setId("updateIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
-                if (shouldKeepColor()) {
-                    runCatching {
-                        val view = chain.thisObject as View
-                        val sbn = MemberLookup.readField(view, "mNotification") as? StatusBarNotification
-                        if (sbn != null && sbn.packageName != "android") {
-                            val context = view.context
-                            val instance = MemberLookup.invokeStatic(
-                                contrastUtil, "getInstance", arrayOf(context), Context::class.java
-                            ) ?: return@runCatching
-                            val isGrayscale = MemberLookup.invoke(
-                                instance, "isGrayscaleIcon",
-                                arrayOf(context, sbn.notification.smallIcon),
-                                Context::class.java, Icon::class.java
-                            ) as? Boolean
-                            if (isGrayscale == false) MemberLookup.writeField(view, "mCurrentSetColor", 0)
-                        }
-                    }.onFailure { ModuleRuntime.logE("updateIconColor failed", it) }
-                }
-                chain.proceed()
-            }
-            ModuleRuntime.logI("updateIconColor hooked")
+        val method = MemberLookup.methodWithParams(iconView, "updateIconColor")
+        if (method == null) {
+            logCandidates(iconView, "updateIconColor")
+            return
         }
+        module.hook(method).setId("updateIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
+            if (shouldKeepColor()) {
+                runCatching {
+                    val view = chain.thisObject as View
+                    val sbn = MemberLookup.readField(view, "mNotification") as? StatusBarNotification
+                    if (sbn != null && sbn.packageName != "android") {
+                        val context = view.context
+                        val instance = MemberLookup.invokeStatic(
+                            contrastUtil, "getInstance", arrayOf(context), Context::class.java
+                        ) ?: return@runCatching
+                        val isGrayscale = MemberLookup.invoke(
+                            instance, "isGrayscaleIcon",
+                            arrayOf(context, sbn.notification.smallIcon),
+                            Context::class.java, Icon::class.java
+                        ) as? Boolean
+                        if (isGrayscale == false) MemberLookup.writeField(view, "mCurrentSetColor", 0)
+                    }
+                }.onFailure { ModuleRuntime.logE("updateIconColor failed", it) }
+            }
+            chain.proceed()
+        }
+        ModuleRuntime.logI("updateIconColor hooked")
     }
 
     @SuppressLint("DiscouragedApi")
@@ -232,7 +252,7 @@ object SystemUiHooks {
         // 嵌套类的二进制名必须用 $ 分隔，写成 . 会让 loadClass 返回 null
         val paramsClass = MemberLookup.findClass("android.app.Notification\$StandardTemplateParams", classLoader)
 
-        val method = if (paramsClass != null) {
+        val exact = if (paramsClass != null) {
             runCatching {
                 MemberLookup.declaredMethod(
                     builderClass, "processSmallIconColor",
@@ -241,7 +261,12 @@ object SystemUiHooks {
             }.getOrNull()
         } else {
             null
-        } ?: fallbackSmallIconColor(builderClass) ?: return
+        }
+        val method = exact ?: fallbackSmallIconColor(builderClass)
+        if (method == null) {
+            logCandidates(builderClass, "processSmallIconColor")
+            return
+        }
         if (!installedHookIds.add("processSmallIconColor")) return
 
         module.hook(method).setId("processSmallIconColor").setExceptionMode(EXCEPTION_MODE).intercept { chain ->
@@ -286,5 +311,24 @@ object SystemUiHooks {
     private fun shouldKeepColor(): Boolean {
         val options = ModuleRuntime.options()
         return options.enabled && options.keepOriginalColor
+    }
+
+    /**
+     * 方法没按预期签名找到时，把同名方法的**真实签名**打进日志。
+     *
+     * SystemUI 的私有方法签名会随版本漂移，而且这些类不在本模块的编译依赖里，
+     * 离线没法查。与其猜，不如让真机自己把答案打出来：
+     * 看到 `(NotificationEntry, StatusBarIcon, StatusBarIconView, boolean)` 就知道该补哪个参数。
+     */
+    private fun logCandidates(owner: Class<*>, methodName: String) {
+        val all = owner.declaredMethods.filter { it.name == methodName }
+        if (all.isEmpty()) {
+            ModuleRuntime.logW("$methodName absent on ${owner.simpleName}")
+            return
+        }
+        val shapes = all.joinToString(" | ") { method ->
+            "(${method.parameterTypes.joinToString { it.simpleName }})"
+        }
+        ModuleRuntime.logW("$methodName signature mismatch on ${owner.simpleName}, found: $shapes")
     }
 }
