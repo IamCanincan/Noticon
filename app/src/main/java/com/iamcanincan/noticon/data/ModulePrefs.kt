@@ -45,6 +45,15 @@ object ModulePrefs {
     /** 系统黑白：把应用原始小图标压成单色，交给系统按主题上色 */
     const val MODE_MONOCHROME = 1
 
+    /**
+     * 没存过配置时用的模式（用户定的：默认单色）。
+     *
+     * 界面初始值、[seedIfAbsent]、[read]、[fromValues] 和 [ConfigProvider] 都取这一个常量 ——
+     * 之前这几处各写各的默认值，改默认模式时漏掉任何一处，
+     * 就会出现「界面显示彩色、模块按单色跑」这种两边不一致的怪现象。
+     */
+    const val DEFAULT_MODE = MODE_MONOCHROME
+
     /** 界面侧入口 */
     fun of(context: Context): SharedPreferences =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -54,7 +63,7 @@ object ModulePrefs {
         if (prefs.contains(KEY_MODE)) return
         prefs.edit()
             .putBoolean(KEY_ENABLED, true)
-            .putInt(KEY_MODE, MODE_LAUNCHER_ICON)
+            .putInt(KEY_MODE, DEFAULT_MODE)
             .apply()
     }
 
@@ -64,7 +73,7 @@ object ModulePrefs {
      * [ModuleOptions.keepOriginalColor] 由模式推导，不单独存 —— 见类注释。
      */
     fun read(prefs: SharedPreferences): ModuleOptions = derive(
-        mode = prefs.getInt(KEY_MODE, MODE_LAUNCHER_ICON),
+        mode = prefs.getInt(KEY_MODE, DEFAULT_MODE),
         enabled = prefs.getBoolean(KEY_ENABLED, true)
     )
 
@@ -75,7 +84,7 @@ object ModulePrefs {
      * 解析失败或键缺失时一律退回默认值 —— 和 [read] 的兜底行为保持一致。
      */
     fun fromValues(values: Map<String, String>): ModuleOptions = derive(
-        mode = values[KEY_MODE]?.trim()?.toIntOrNull() ?: MODE_LAUNCHER_ICON,
+        mode = values[KEY_MODE]?.trim()?.toIntOrNull() ?: DEFAULT_MODE,
         enabled = values[KEY_ENABLED]?.trim()?.toBooleanStrictOrNull() ?: true
     )
 

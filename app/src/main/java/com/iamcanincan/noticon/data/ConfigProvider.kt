@@ -40,7 +40,7 @@ class ConfigProvider : ContentProvider() {
         val prefs = ModulePrefs.of(ctx)
         cursor.addRow(
             arrayOf<Any>(
-                prefs.getInt(ModulePrefs.KEY_MODE, ModulePrefs.MODE_LAUNCHER_ICON),
+                prefs.getInt(ModulePrefs.KEY_MODE, ModulePrefs.DEFAULT_MODE),
                 if (prefs.getBoolean(ModulePrefs.KEY_ENABLED, true)) 1 else 0
             )
         )

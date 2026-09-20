@@ -75,7 +75,7 @@ fun SettingsScreen() {
 
     var enabled by remember { mutableStateOf(prefs.getBoolean(ModulePrefs.KEY_ENABLED, true)) }
     var mode by remember {
-        mutableIntStateOf(prefs.getInt(ModulePrefs.KEY_MODE, ModulePrefs.MODE_LAUNCHER_ICON))
+        mutableIntStateOf(prefs.getInt(ModulePrefs.KEY_MODE, ModulePrefs.DEFAULT_MODE))
     }
 
     val version = remember { installedVersion(context) }
