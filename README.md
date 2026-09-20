@@ -10,8 +10,8 @@ Android 12 起系统会强行把通知小图标统一着色，没做单色适配
 
 | 模式 | 做法 | 适合 |
 |---|---|---|
-| **彩色桌面图标**（默认） | 换成 App 在桌面上那个图标，颜色原样保留 | 想让通知一眼认出是谁 |
-| **系统黑白通知** | 把 App 自己给的小图标压成单色剪影，交给系统按主题着色 | 想和其它通知风格统一 |
+| **系统黑白通知**（默认） | 把 App 自己给的小图标压成单色剪影，交给系统按主题着色 | 想和其它通知风格统一 |
+| **彩色桌面图标** | 换成 App 在桌面上那个图标，颜色原样保留 | 想让通知一眼认出是谁 |
 
 两个模式的区别只在"未适配的图标怎么处理"；已经是单色/灰度的图标，两种模式下都不动。
 
@@ -30,6 +30,10 @@ Android 12 起系统会强行把通知小图标统一着色，没做单色适配
   界面图标全是手写的 vector drawable（`res/drawable/ic_*.xml`），没有引入图标库；
   配色只用 `colorScheme` 的语义角色，不写死颜色，浅色 / 深色两套主题都已实机核对。
 - 仅注入 `com.android.systemui`，不碰其他进程。
+- **桌面图标支持系统主题色**：Noticon 自己的图标是三层 adaptive icon（背景 / 前景 / 单色层），
+  单色层带 `ic_launcher_monochrome`，在 Android 13+ 的「主题图标」开关打开后会跟随系统主题色上色。
+  该层放在 `mipmap-anydpi-v33/` 下 —— `<monochrome>` 是 API 33+ 才有的元素，
+  放在没有版本限定符的目录里会被启动器忽略，主题图标就不生效了。
 - 联网只用于设置界面里的「检查更新」：点按钮才去读一次最新 Release，比对版本号。
   直连 `api.github.com` 失败时（国内网络常见 DNS 屏蔽）会退到公共加速镜像 `gh-proxy.com`。
   没有后台轮询、没有统计、没有上报、没有广告。挂钩部分（跑在 SystemUI 进程里的代码）完全不联网。
@@ -58,7 +62,12 @@ options: enabled=true mode=monochrome keepColor=false preserveTinted=true (sourc
 2. 在 **LSPosed / Vector**（或其他支持 LibXposed API 102 的框架）中启用 Noticon。
 3. **不用勾作用域**：模块通过 `staticScope=true` + `META-INF/xposed/scope.list` 把
    作用域写死成 `com.android.systemui`，管理器里只会列出系统界面这一项，也不会让你勾到别的应用。
-4. 重启设备让模块生效（这一步之后就不用再重启了）。
+4. ⚠ **在模块详情页点一次「应用」再重启** —— 这是「模块明明启用了却不生效」最常见的原因：
+   部分框架（实测 Vector 2.2）在 `staticScope=true` 时**不会**自动把 `scope.list` 写进自己的
+   作用域数据库，界面上显示「由模块固定」，框架侧却认为这个模块没有作用域、于是不注入。
+   到模块详情页点一次底部的「应用」把作用域落库，再重启设备。
+   **重装过 APK 的话这一步要重做**：重装会换掉 `/data/app/~~XXXX==/` 目录名，原来的记录随之失效。
+5. 重启设备让模块生效（这一步之后就不用再重启了）。
 
 ### 日志排查
 
@@ -94,7 +103,7 @@ adb logcat -s Noticon -d
 device sdk=37 (Android 17)
 all target classes resolved
 attaching to SystemUI (api=102, framework=...)
-options: enabled=true mode=0 keepColor=true
+options: enabled=true mode=monochrome keepColor=false preserveTinted=true (source=provider)
 inflateViews hooked
 setIcon hooked
 updateIconColor hooked
@@ -167,15 +176,19 @@ com.iamcanincan.noticon
 ```
 
 界面图标（`res/drawable/ic_*.xml`）都是手写的 vector drawable，没有引图标库：
-`ic_mode_color` 调色盘 / `ic_mode_mono` 对比度 / `ic_power` 电源 /
+`ic_brand_mark` 品牌字标 / `ic_mode_color` 调色盘 / `ic_mode_mono` 对比度 / `ic_power` 电源 /
 `ic_update` 下载 / `ic_scope` 盾牌。都是黑色描边或填充，实际颜色由 `Icon(tint=…)` 决定。
+
+> `ic_brand_mark` 与桌面图标专用的 `ic_launcher_foreground` 是**两份独立的字形**，不要互相替换：
+> 后者按 adaptive icon 的比例设计（字形只占图标 31%）且颜色写死深色，直接贴到 Compose 界面上
+> 会「太小 + 深色模式下几乎看不见」。界面一律用 `ic_brand_mark`（黑色 + 由 tint 决定）。
 
 界面只让用户选「模式」外加一个总开关，其余选项由模式推导，不需要额外配置渠道。底层 `replacement` 仍保留三种取值：
 
 | 值 | 常量 | 行为 |
 |---|---|---|
-| 0 | `USE_LAUNCHER_ICON` | 换成彩色桌面图标（**默认**） |
-| 1 | `FORCE_MONOCHROME` | 把应用自己给的那个小图标就地压成黑白剪影，由系统按主题着色 |
+| 0 | `USE_LAUNCHER_ICON` | 换成彩色桌面图标 |
+| 1 | `FORCE_MONOCHROME` | 把应用自己给的那个小图标就地压成黑白剪影，由系统按主题着色（**默认**） |
 | 2 | `LAUNCHER_ICON_MONOCHROME` | 取桌面图标的轮廓压成灰度，去色但保留明暗（暂未在界面里暴露） |
 
 `keepOriginalColor` 必须和策略配对：交出去的是彩色就开保色，交出去的是单色就关掉、让系统按主题上色。
