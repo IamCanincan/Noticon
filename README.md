@@ -135,7 +135,7 @@ processSmallIconColor hooked
 $BT=~/AppData/Local/Android/Sdk/build-tools/36.0.0
 "$BT/zipalign.exe" -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk _aligned.apk
 java -jar "$BT/lib/apksigner.jar" sign --ks noticon-release.jks --ks-key-alias noticon \
-     --ks-pass pass:noticon --key-pass pass:noticon --out Noticon-release.apk _aligned.apk
+     --ks-pass pass:<密钥密码> --key-pass pass:<密钥密码> --out Noticon-release.apk _aligned.apk
 ```
 
 > 说明：仓库的仓库源首位配了阿里云镜像。若你的网络可以直接访问 `dl.google.com`，
@@ -204,5 +204,5 @@ com.iamcanincan.noticon
 
 ## 签名密钥
 
-`noticon-release.jks` 是本模块的自签名密钥（密码均为 `noticon`），已被 `.gitignore` 排除、不会入库。
+`noticon-release.jks` 是本模块的自签名密钥（密码见本地密钥配置，已被 `.gitignore` 排除、不会入库）。
 **请自行备份**——后续更新必须用同一密钥签名，否则设备会拒绝覆盖安装。
